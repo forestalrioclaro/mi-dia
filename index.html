@@ -229,6 +229,7 @@ svg{display:block;flex:none}
 .lg-hol{background:var(--danger-soft)!important;border:1px solid var(--danger)}
 .lg-we{background:var(--gray-soft)!important;border:1px solid var(--line)}
 .due-warn{margin:0;padding:0 14px 12px;color:var(--danger);font-size:13px}
+.span-info{margin:0;padding:0 14px 12px;color:var(--muted);font-size:13px}
 
 /* Vacaciones y permisos */
 .cal-cell.absent{background:var(--leave-soft)}
@@ -408,6 +409,11 @@ const isBusinessDay = s => !isWeekend(s) && !HOLIDAYS[s];
 const isWorkday = s => isBusinessDay(s) && !absenceOn(s);
 function nextWorkday(s){ let d = s; for (let i = 0; i < 400 && !isWorkday(d); i++) d = addDays(d,1); return d; }
 function nextBusinessDay(s){ let d = s; for (let i = 0; i < 30 && !isBusinessDay(d); i++) d = addDays(d,1); return d; }
+function countWorkdays(from, to){ let n = 0, d = from; for (let i = 0; i < 1000 && d <= to; i++){ if (isWorkday(d)) n++; d = addDays(d,1); } return n; }
+function prevWorkdays(s, k){ let d = s; for (let i = 0; i < 1000 && k > 0; i++){ d = addDays(d,-1); if (isWorkday(d)) k--; } return d; }
+// Días hábiles que ocupa una tarea con inicio y vencimiento
+function spanDays(start, due){ const out = []; let d = start; for (let i = 0; i < 400 && d <= due; i++){ if (isWorkday(d)) out.push(d); d = addDays(d,1); } return out.length ? out : [due]; }
+const hasSpan = t => !!(t.start && t.due && t.start < t.due);
 function countBusinessDays(from, to){ let n = 0, d = from; for (let i = 0; i < 1000 && d <= to; i++){ if (isBusinessDay(d)) n++; d = addDays(d,1); } return n; }
 function nonWorkingText(s){
   if (HOLIDAYS[s]) return "Feriado: " + HOLIDAYS[s];
@@ -462,7 +468,7 @@ function normalize(s){
   const ids = new Set(["tasks", ...lists.map(l => l.id)]);
   const tasks = Array.isArray(s.tasks) ? s.tasks.filter(t => t && t.id).map(t => ({
     id:String(t.id), title:String(t.title||""), done:!!t.done, important:!!t.important, doing:!!t.doing,
-    myDay:t.myDay||"", due:t.due||"", repeat:(t.repeat && REPEAT[t.repeat]) ? t.repeat : "",
+    myDay:t.myDay||"", due:t.due||"", start:(t.due && t.start && t.start <= t.due) ? t.start : "", repeat:(t.repeat && REPEAT[t.repeat]) ? t.repeat : "",
     repeatDays:Array.isArray(t.repeatDays) ? [...new Set(t.repeatDays.map(Number).filter(n => n >= 0 && n <= 6))] : [],
     listId: ids.has(t.listId) ? t.listId : "tasks", notes:String(t.notes||""),
     steps:Array.isArray(t.steps) ? t.steps.map(x => ({id:String(x.id||uid()), title:String(x.title||""), done:!!x.done})) : [],
@@ -521,7 +527,7 @@ const stamp = ms => { if (!ms) return ""; const d = new Date(ms); return ymd(d)+
 function taskToRow(t){
   return {id:t.id, titulo:t.title, lista:listName(t.listId),
     estado:t.done ? "Completada" : t.doing ? "En curso" : "Pendiente",
-    importante:t.important ? "Sí" : "No", mi_dia:t.myDay, vence:t.due,
+    importante:t.important ? "Sí" : "No", mi_dia:t.myDay, vence:t.due, inicio:t.start,
     repetir:t.repeat ? REPEAT[t.repeat] : "", dias_repeticion:t.repeat === "days" ? repeatText(t) : "",
     nota:t.notes, pasos:t.steps.length ? JSON.stringify(t.steps) : "",
     creada:stamp(t.createdAt), completada:stamp(t.completedAt), lista_id:t.listId,
@@ -530,7 +536,7 @@ function taskToRow(t){
 function rowToTask(r){
   let steps = []; try { steps = r.pasos ? JSON.parse(r.pasos) : []; } catch(e){}
   return {id:r.id, title:r.titulo, done:r.estado === "Completada", doing:r.estado === "En curso",
-    important:r.importante === "Sí", myDay:r.mi_dia, due:r.vence, repeat:REPEAT_BY_LABEL[r.repetir] || "",
+    important:r.importante === "Sí", myDay:r.mi_dia, due:r.vence, start:r.inicio || "", repeat:REPEAT_BY_LABEL[r.repetir] || "",
     repeatDays:String(r.dias_repeticion||"").split(",").map(x => DAY_SHORT.indexOf(x.trim())).filter(n => n >= 0),
     listId:r.lista_id || "tasks", notes:r.nota, steps, createdAt:+r.creada_ms, completedAt:+r.completada_ms};
 }
@@ -692,6 +698,7 @@ function suggestions(){
     let why = "";
     if (x.due && x.due < t) why = "Vencida " + dueLabel(x.due).toLowerCase();
     else if (x.due === t) why = "Vence hoy";
+    else if (hasSpan(x) && x.start <= t) why = "En plazo hasta el " + dueLabel(x.due).toLowerCase();
     else if (x.due && x.due <= soon) why = "Vence " + dueLabel(x.due).toLowerCase();
     else if (x.doing) why = "En curso";
     else if (x.myDay && x.myDay < t) why = "Quedó pendiente de " + dueLabel(x.myDay).toLowerCase();
@@ -726,7 +733,7 @@ function taskRow(t, showList){
   if (t.steps.length){ const d = t.steps.filter(s=>s.done).length; meta.push('<span>'+I.steps+d+' de '+t.steps.length+'</span>'); }
   if (t.due){
     const cls = (!t.done && t.due < tt) ? "late" : (t.due === tt ? "today" : "");
-    meta.push('<span class="'+cls+'">'+I.cal.replace('width="20" height="20"','width="13" height="13"')+esc(dueLabel(t.due))+'</span>');
+    meta.push('<span class="'+cls+'">'+I.cal.replace('width="20" height="20"','width="13" height="13"')+esc(hasSpan(t) ? dueLabel(t.start) + " – " + dueLabel(t.due) : dueLabel(t.due))+'</span>');
   }
   if (t.repeat && !t.done) meta.push('<span>↻ '+esc(repeatText(t))+'</span>');
   if (t.notes.trim()) meta.push('<span>'+I.note+'Nota</span>');
@@ -838,8 +845,10 @@ function renderDetail(){
       + '<button class="opt doing'+(t.doing&&!t.done?' on':'')+'" data-act="dDoing">'+I.play+'<span>'+(t.doing&&!t.done?'En curso: estoy trabajando en esto':'Marcar como en curso')+'</span>'+(t.doing&&!t.done?'<span class="clear">'+I.x+'</span>':'')+'</button>'
     + '</div>'
     + '<div class="card">'
+      + '<div class="field"><label for="dStart">Inicio</label><input type="date" id="dStart" value="'+esc(t.start)+'"></div>'
       + '<div class="field"><label for="dDue">Vence</label><input type="date" id="dDue" value="'+esc(t.due)+'"></div>'
       + '<div class="quick"><button data-act="due" data-v="0">Hoy</button><button data-act="due" data-v="1">Mañana</button><button data-act="due" data-v="mon">Próximo lunes</button>'+(t.due?'<button data-act="due" data-v="">Quitar fecha</button>':'')+'</div>'
+      + (hasSpan(t) ? '<p class="span-info">Duración: '+(n => n === 1 ? '1 día hábil' : n+' días hábiles')(countWorkdays(t.start, t.due))+', del '+esc(fmtShort(t.start))+' al '+esc(fmtShort(t.due))+'. No se marca atrasada antes del vencimiento.</p>' : '')
       + (t.due && !isWorkday(t.due) ? '<p class="due-warn">Ojo: ese día no se trabaja ('+esc(nonWorkingText(t.due))+').</p>' : '')
       + '<div class="field"><label for="dRep">Repetir</label><select id="dRep">'+repOpts+'</select></div>'
       + (t.repeat === "days" ? '<div class="days" role="group" aria-label="Días de repetición">'+DAY_ORDER.map(d => '<button data-act="day" data-d="'+d+'" class="'+(t.repeatDays.includes(d)?'on':'')+'" aria-pressed="'+t.repeatDays.includes(d)+'" title="'+DAY_SHORT[d]+'">'+DAY_LETTER[d]+'</button>').join("")+'</div>' : '')
@@ -872,26 +881,35 @@ function renderCalendar(){
     + '<button class="chip-btn" data-act="calToday">Hoy</button>'
     + '<button class="chip-btn" data-act="calNext" aria-label="Mes siguiente">'+I.chev+'</button>';
   const byDay = {};
-  state.tasks.forEach(t => { const d = calDate(t); (byDay[d] = byDay[d] || []).push(t); });
+  state.tasks.forEach(t => {
+    const days = hasSpan(t) ? spanDays(t.start, t.due) : [calDate(t)];
+    days.forEach((d, i) => (byDay[d] = byDay[d] || []).push({t, i:i+1, n:days.length}));
+  });
   const order = {late:0, doing:1, wait:2, ok:3};
-  Object.keys(byDay).forEach(k => byDay[k].sort((x,y) => order[calStatus(x)] - order[calStatus(y)] || x.createdAt - y.createdAt));
+  Object.keys(byDay).forEach(k => byDay[k].sort((x,y) => order[calStatus(x.t)] - order[calStatus(y.t)] || x.t.createdAt - y.t.createdAt));
   const start = new Date(m); start.setDate(1 - ((m.getDay()+6) % 7));
   const last = new Date(m.getFullYear(), m.getMonth()+1, 0);
   const end = new Date(last); end.setDate(last.getDate() + (6 - ((last.getDay()+6) % 7)));
   const tt = today();
-  const counts = {ok:0, doing:0, late:0, wait:0};
-  const chip = t => { const s = calStatus(t);
-    return '<button class="cal-task st-'+s+(selected===t.id?' sel':'')+'" data-act="open" data-id="'+esc(t.id)+'" title="'+esc(t.title+' — '+ST_LABEL[s])+'">'+(t.repeat&&!t.done?'↻ ':'')+esc(t.title)+'</button>'; };
+  const counted = {ok:new Set(), doing:new Set(), late:new Set(), wait:new Set()};
+  const chip = e => { const t = e.t, s = calStatus(t), part = e.n > 1 ? ' (día '+e.i+' de '+e.n+')' : '';
+    return '<button class="cal-task st-'+s+(selected===t.id?' sel':'')+'" data-act="open" data-id="'+esc(t.id)+'" title="'+esc(t.title+' — '+ST_LABEL[s]+part)+'">'+(t.repeat&&!t.done?'↻ ':'')+esc(t.title)+(e.n > 1 ? ' <small>'+e.i+'/'+e.n+'</small>' : '')+'</button>'; };
   const ghostChip = t => '<button class="cal-task ghost" data-act="open" data-id="'+esc(t.id)+'" title="'+esc(t.title+' — Repetición programada ('+repeatText(t)+')')+'">↻ '+esc(t.title)+'</button>';
   const endKey = ymd(end), ghosts = {};
   state.tasks.filter(t => !t.done && t.repeat && t.due).forEach(t => {
+    const len = hasSpan(t) ? spanDays(t.start, t.due).length : 1;
     let d = t.due;
-    for (let i = 0; i < 400; i++){ d = nextRepeat(d, t.repeat, t.repeatDays); if (d > endKey) break; (ghosts[d] = ghosts[d] || []).push(t); }
+    for (let i = 0; i < 400; i++){
+      d = nextRepeat(d, t.repeat, t.repeatDays);
+      const s = len > 1 ? prevWorkdays(d, len - 1) : d;
+      if (s > endKey) break;
+      (len > 1 ? spanDays(s, d) : [d]).forEach(x => { if (!(ghosts[x] || []).includes(t)) (ghosts[x] = ghosts[x] || []).push(t); });
+    }
   });
   let grid = "", agenda = "";
   for (let d = new Date(start); d <= end; d.setDate(d.getDate()+1)){
     const k = ymd(d), items = byDay[k] || [], out = d.getMonth() !== m.getMonth();
-    if (!out) items.forEach(t => counts[calStatus(t)]++);
+    if (!out) items.forEach(e => counted[calStatus(e.t)].add(e.t.id));
     const gh = ghosts[k] || [];
     const hol = holidayName(k);
     const dayCls = hol ? ' holiday' : isWeekend(k) ? ' weekend' : '';
@@ -901,7 +919,7 @@ function renderCalendar(){
     grid += '<div class="cal-cell'+dayCls+(abs&&!hol?' absent':'')+(out?' out':'')+(k===tt?' is-today':'')+'"'+(hol?' title="Feriado: '+esc(hol)+'"':'')+'><div class="cal-num">'+d.getDate()+'</div>'+holHtml+html+'</div>';
     if (!out && (items.length || gh.length || hol || abs)) agenda += '<div class="ag-day'+(hol?' holiday':abs?' absent':'')+(k===tt?' is-today':'')+'"><div class="ag-h">'+esc(fmtLong(k))+(hol?' · Feriado':'')+'</div>'+holHtml+html+'</div>';
   }
-  const lg = s => '<span><i class="lg-'+s+'"></i>'+ST_LABEL[s]+' <b>'+counts[s]+'</b></span>';
+  const lg = s => '<span><i class="lg-'+s+'"></i>'+ST_LABEL[s]+' <b>'+counted[s].size+'</b></span>';
   document.getElementById("body").innerHTML =
     '<div class="legend">'+lg("ok")+lg("doing")+lg("late")+lg("wait")+'<span><i class="lg-ghost"></i>Repetición programada</span><span><i class="lg-hol"></i>Feriado</span><span><i class="lg-abs"></i>Vacaciones o permiso</span><span><i class="lg-we"></i>Fin de semana</span></div>'
     + '<div class="cal-week"><span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span></div>'
@@ -983,9 +1001,9 @@ function reportData(d){
   const open = state.tasks.filter(t => !t.done);
   const doneDay = state.tasks.filter(t => t.done && t.completedAt && ymd(new Date(t.completedAt)) === d).sort(sortDone);
   const doing = open.filter(t => t.doing).sort(sortOpen);
-  const pend = open.filter(t => !t.doing && (t.myDay === d || t.due === d)).sort(sortOpen);
+  const pend = open.filter(t => !t.doing && (t.myDay === d || t.due === d || (hasSpan(t) && t.start <= d && d <= t.due))).sort(sortOpen);
   const late = open.filter(t => !t.doing && t.due && t.due < d && t.myDay !== d).sort((a,b) => a.due.localeCompare(b.due));
-  const next = open.filter(t => !t.doing && t.due && t.due > d && t.due <= addDays(d,7) && t.myDay !== d).sort((a,b) => a.due.localeCompare(b.due));
+  const next = open.filter(t => !t.doing && t.due && t.due > d && t.due <= addDays(d,7) && t.myDay !== d && !(hasSpan(t) && t.start <= d)).sort((a,b) => a.due.localeCompare(b.due));
   return {doing, doneDay, pend, late, next};
 }
 function lineInfo(t, withDue){
@@ -1039,7 +1057,7 @@ function setView(v){
 }
 function addTask(title){
   title = title.trim(); if (!title) return;
-  const t = {id:uid(), title, done:false, important:false, doing:false, myDay:"", due:"", repeat:"", repeatDays:[],
+  const t = {id:uid(), title, done:false, important:false, doing:false, myDay:"", due:"", start:"", repeat:"", repeatDays:[],
     listId:"tasks", notes:"", steps:[], createdAt:Date.now(), completedAt:0};
   if (view === "myday") t.myDay = today();
   if (view === "important") t.important = true;
@@ -1058,7 +1076,9 @@ function toggleTask(id){
   if (t.done && t.repeat && t.due){
     let nd = nextRepeat(t.due, t.repeat, t.repeatDays);
     for (let i = 0; i < 400 && nd < today(); i++) nd = nextRepeat(nd, t.repeat, t.repeatDays);
-    state.tasks.push({...t, id:uid(), done:false, completedAt:0, doing:false, myDay:"", due:nd,
+    const len = hasSpan(t) ? spanDays(t.start, t.due).length : 1;
+    const ns = len > 1 ? prevWorkdays(nd, len - 1) : "";
+    state.tasks.push({...t, id:uid(), done:false, completedAt:0, doing:false, myDay:"", due:nd, start:ns,
       repeatDays:t.repeatDays.slice(), steps:t.steps.map(s => ({id:uid(), title:s.title, done:false})), createdAt:Date.now()});
     t.repeat = "";
     msg = "Próxima repetición: " + dueLabel(nd).toLowerCase();
@@ -1185,7 +1205,17 @@ detailEl.addEventListener("keydown", e => {
 });
 detailEl.addEventListener("change", e => {
   const t = byId(selected); if (!t) return;
-  if (e.target.id === "dDue"){ t.due = e.target.value; commit(); }
+  if (e.target.id === "dDue"){
+    t.due = e.target.value;
+    if (!t.due){ t.start = ""; t.repeat = ""; }
+    else if (t.start && t.start > t.due) t.start = t.due;
+    commit();
+  }
+  if (e.target.id === "dStart"){
+    t.start = e.target.value;
+    if (t.start && (!t.due || t.due < t.start)) t.due = t.start;
+    commit();
+  }
   if (e.target.id === "dRep"){
     t.repeat = e.target.value;
     if (t.repeat === "days" && !t.repeatDays.length) t.repeatDays = [parse(t.due || today()).getDay()];
@@ -1208,7 +1238,7 @@ detailEl.addEventListener("click", e => {
     case "dStar": t.important = !t.important; commit(); break;
     case "dMyDay": t.myDay = t.myDay === today() ? "" : today(); commit(); break;
     case "dDoing": t.doing = !(t.doing && !t.done); if (t.doing){ t.done = false; t.completedAt = 0; if (t.myDay !== today()) t.myDay = today(); } commit(); break;
-    case "due": { const v = b.dataset.v; t.due = v === "" ? "" : v === "mon" ? nextMonday() : addDays(today(), +v); if (!t.due) t.repeat = ""; commit(); break; }
+    case "due": { const v = b.dataset.v; t.due = v === "" ? "" : v === "mon" ? nextMonday() : addDays(today(), +v); if (!t.due){ t.repeat = ""; t.start = ""; } else if (t.start && t.start > t.due) t.start = t.due; commit(); break; }
     case "stepToggle": { const s = t.steps.find(x => x.id === stepId); s.done = !s.done; commit(); break; }
     case "stepDel": t.steps = t.steps.filter(x => x.id !== stepId); commit(); break;
     case "day": {
