@@ -11,7 +11,7 @@
 :root{
   --bg:#F3F4F1; --surface:#FFFFFF; --side:#E7EAE5; --ink:#1D2621; --muted:#65706A;
   --line:#D8DDD6; --pine:#2E6A4D; --pine-ink:#FFFFFF; --pine-soft:#DCEBE2; --amber:#A86C12;
-  --amber-soft:#F6E9D2; --danger:#B03D2B; --danger-soft:#F7E0DB; --doing:#C2620F; --doing-soft:#FBE7D4; --gray-soft:#ECEEEA;
+  --amber-soft:#F6E9D2; --danger:#B03D2B; --danger-soft:#F7E0DB; --doing:#C2620F; --doing-soft:#FBE7D4; --gray-soft:#ECEEEA; --leave:#5B47B0; --leave-soft:#ECE8FA;
   --hover:rgba(29,38,33,.05); --shadow:0 1px 2px rgba(29,38,33,.08),0 4px 16px rgba(29,38,33,.06);
   color-scheme:light;
   box-sizing:border-box;
@@ -21,7 +21,7 @@
   :root:not([data-theme="light"]){
     --bg:#131816; --surface:#1B2220; --side:#171D1A; --ink:#E5EAE6; --muted:#97A29B;
     --line:#2B3530; --pine:#6DB690; --pine-ink:#0F1A14; --pine-soft:#20352A; --amber:#E2AA4E;
-    --amber-soft:#3A2E1A; --danger:#E67C68; --danger-soft:#3D221E; --doing:#F0A060; --doing-soft:#3A2818; --gray-soft:#262E2A;
+    --amber-soft:#3A2E1A; --danger:#E67C68; --danger-soft:#3D221E; --doing:#F0A060; --doing-soft:#3A2818; --gray-soft:#262E2A; --leave:#B5A6F2; --leave-soft:#2B2642;
     --hover:rgba(229,234,230,.06); --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 16px rgba(0,0,0,.3);
     color-scheme:dark;
   }
@@ -29,7 +29,7 @@
 :root[data-theme="dark"]{
   --bg:#131816; --surface:#1B2220; --side:#171D1A; --ink:#E5EAE6; --muted:#97A29B;
   --line:#2B3530; --pine:#6DB690; --pine-ink:#0F1A14; --pine-soft:#20352A; --amber:#E2AA4E;
-  --amber-soft:#3A2E1A; --danger:#E67C68; --danger-soft:#3D221E; --doing:#F0A060; --doing-soft:#3A2818; --gray-soft:#262E2A;
+  --amber-soft:#3A2E1A; --danger:#E67C68; --danger-soft:#3D221E; --doing:#F0A060; --doing-soft:#3A2818; --gray-soft:#262E2A; --leave:#B5A6F2; --leave-soft:#2B2642;
   --hover:rgba(229,234,230,.06); --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 16px rgba(0,0,0,.3);
   color-scheme:dark;
 }
@@ -56,7 +56,7 @@ svg{display:block;flex:none}
 .nav-item .count{margin-left:auto;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
 .nav-item .ico-sun{color:var(--amber)} .nav-item .ico-star{color:var(--danger)}
 .nav-item .ico-cal{color:var(--doing)} .nav-item .ico-home{color:var(--pine)}
-.nav-item .ico-list{color:var(--muted)} .nav-item .ico-month{color:var(--doing)} .nav-item .ico-report{color:var(--pine)}
+.nav-item .ico-list{color:var(--muted)} .nav-item .ico-leave{color:var(--leave)} .nav-item .ico-month{color:var(--doing)} .nav-item .ico-report{color:var(--pine)}
 .nav hr{border:0;border-top:1px solid var(--line);margin:8px 10px}
 .side-foot{border-top:1px solid var(--line);padding:10px 12px;display:flex;flex-direction:column;gap:6px}
 .side-foot .row{display:flex;gap:6px}
@@ -230,6 +230,29 @@ svg{display:block;flex:none}
 .lg-we{background:var(--gray-soft)!important;border:1px solid var(--line)}
 .due-warn{margin:0;padding:0 14px 12px;color:var(--danger);font-size:13px}
 
+/* Vacaciones y permisos */
+.cal-cell.absent{background:var(--leave-soft)}
+.cal-abs{font-size:11.5px;line-height:1.25;color:var(--leave);font-weight:600;margin-bottom:2px}
+.ag-day.absent{border:1px solid var(--leave);background:var(--leave-soft)}
+.lg-abs{background:var(--leave-soft)!important;border:1px solid var(--leave)}
+.leave{display:grid;gap:14px;max-width:780px}
+.lf-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.lf-grid label{display:flex;flex-direction:column;gap:6px;font-weight:600;font-size:14px}
+.lf-grid input,.lf-grid select{border:1px solid var(--line);border-radius:9px;padding:9px 10px;background:var(--bg);font-weight:400;min-width:0}
+.lf-grid .wide{grid-column:1/-1}
+.lv-info{color:var(--muted);margin:12px 0;min-height:1.4em}
+.lv-info.err{color:var(--danger)}
+.lf-btns{display:flex;gap:8px;flex-wrap:wrap}
+.lv-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
+.lv-row:first-child{border-top:0}
+.lv-row.past{opacity:.6}
+.lv-chip{background:var(--leave-soft);color:var(--leave);font-weight:600;font-size:13px;border-radius:6px;padding:2px 8px;flex:none}
+.lv-main{flex:1;min-width:0}
+.lv-main small{display:block;color:var(--muted)}
+.lv-row button{padding:6px 10px;border-radius:8px;font-size:14px;font-weight:500}
+.lv-row button:hover{background:var(--hover)}
+.lv-row .del:hover{color:var(--danger)}
+
 /* Ingreso */
 .app[hidden],.login[hidden]{display:none}
 .login{position:fixed;inset:0;display:grid;place-items:center;padding:20px;background:var(--bg)}
@@ -317,6 +340,7 @@ const I = {
   cal:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>',
   month:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4M8 14h2M14 14h2M8 17h2"/></svg>',
   chevl:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg>',
+  leave:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18"/><path d="M12 4a7 7 0 017 7H5a7 7 0 017-7z"/><path d="M12 11v9"/></svg>',
   home:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 11l8-6.5 8 6.5V20H4z"/><path d="M10 20v-5h4v5"/></svg>',
   list:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/></svg>',
   report:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/></svg>',
@@ -377,9 +401,19 @@ const HOLIDAYS = {
 };
 const holidayName = s => HOLIDAYS[s] || "";
 const isWeekend = s => { const g = parse(s).getDay(); return g === 0 || g === 6; };
-const isWorkday = s => !isWeekend(s) && !HOLIDAYS[s];
-function nextWorkday(s){ let d = s; for (let i = 0; i < 30 && !isWorkday(d); i++) d = addDays(d,1); return d; }
-function nonWorkingText(s){ return HOLIDAYS[s] ? "Feriado: " + HOLIDAYS[s] : isWeekend(s) ? "Fin de semana" : ""; }
+/* Vacaciones y permisos (mantenedor de ausencias) */
+const LEAVE_TYPES = ["Vacaciones","Permiso","Licencia médica","Otro"];
+const absenceOn = s => state.absences.find(a => a.from <= s && s <= a.to) || null;
+const isBusinessDay = s => !isWeekend(s) && !HOLIDAYS[s];
+const isWorkday = s => isBusinessDay(s) && !absenceOn(s);
+function nextWorkday(s){ let d = s; for (let i = 0; i < 400 && !isWorkday(d); i++) d = addDays(d,1); return d; }
+function nextBusinessDay(s){ let d = s; for (let i = 0; i < 30 && !isBusinessDay(d); i++) d = addDays(d,1); return d; }
+function countBusinessDays(from, to){ let n = 0, d = from; for (let i = 0; i < 1000 && d <= to; i++){ if (isBusinessDay(d)) n++; d = addDays(d,1); } return n; }
+function nonWorkingText(s){
+  if (HOLIDAYS[s]) return "Feriado: " + HOLIDAYS[s];
+  const a = absenceOn(s); if (a) return a.type;
+  return isWeekend(s) ? "Fin de semana" : "";
+}
 function nextMonday(){ const d = new Date(); const k = (8 - d.getDay()) % 7 || 7; d.setDate(d.getDate()+k); return ymd(d); }
 const DAY_SHORT = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
 const DAY_LETTER = ["D","L","M","X","J","V","S"];
@@ -434,7 +468,9 @@ function normalize(s){
     steps:Array.isArray(t.steps) ? t.steps.map(x => ({id:String(x.id||uid()), title:String(x.title||""), done:!!x.done})) : [],
     createdAt:+t.createdAt || Date.now(), completedAt:+t.completedAt || 0
   })) : [];
-  return {lists, tasks};
+  const absences = Array.isArray(s.absences) ? s.absences.filter(a => a && a.id && /^\d{4}-\d{2}-\d{2}$/.test(a.from||"") && /^\d{4}-\d{2}-\d{2}$/.test(a.to||""))
+    .map(a => ({id:String(a.id), type:LEAVE_TYPES.includes(a.type) ? a.type : "Otro", from:a.from, to:a.to < a.from ? a.from : a.to, note:String(a.note||"")})) : [];
+  return {lists, tasks, absences};
 }
 function loadLocal(){ try { const r = localStorage.getItem(LS_KEY); return r ? JSON.parse(r) : null; } catch(e){ return null; } }
 function saveLocal(){ try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch(e){} }
@@ -447,12 +483,14 @@ let showDone = true;
 let showSugg = false;
 let reportDate = today();
 let calMonth = today().slice(0,8) + "01";
+let leaveEdit = null;
+let leaveDraft = {type:"Vacaciones", from:"", to:"", note:""};
 let currentDay = today();
 
 /* ---------- Google Sheets: sesión y sincronización ---------- */
 let token = localStorage.getItem(LS_TOKEN) || "";
 let pending = (() => { try { return JSON.parse(localStorage.getItem(LS_PEND) || "[]"); } catch(e){ return []; } })();
-let shadow = {t:new Map(), l:new Map()};
+let shadow = {t:new Map(), l:new Map(), a:new Map()};
 let flushing = false, flushTimer = null, retryDelay = 2000, lastError = false;
 
 function setSync(kind, txt){
@@ -497,15 +535,18 @@ function rowToTask(r){
     listId:r.lista_id || "tasks", notes:r.nota, steps, createdAt:+r.creada_ms, completedAt:+r.completada_ms};
 }
 const listToRow = l => ({id:l.id, nombre:l.name});
+const absenceToRow = a => ({id:a.id, tipo:a.type, desde:a.from, hasta:a.to, nota:a.note, dias_habiles:String(countBusinessDays(a.from, a.to))});
+const rowToAbsence = r => ({id:r.id, type:r.tipo, from:r.desde, to:r.hasta, note:r.nota});
 
 /* Cola de cambios: se compara el estado con lo último enviado y se suben solo las diferencias */
 function snapshotShadow(){
   shadow.t = new Map(state.tasks.map(t => [t.id, JSON.stringify(taskToRow(t))]));
   shadow.l = new Map(state.lists.map(l => [l.id, JSON.stringify(listToRow(l))]));
+  shadow.a = new Map(state.absences.map(a => [a.id, JSON.stringify(absenceToRow(a))]));
 }
 function savePending(){ try { localStorage.setItem(LS_PEND, JSON.stringify(pending)); } catch(e){} }
 function enqueue(op){
-  const key = (op.op.endsWith("Task") ? "t:" : "l:") + op.id;
+  const key = (op.op.endsWith("Task") ? "t:" : op.op.endsWith("Absence") ? "a:" : "l:") + op.id;
   op.key = key;
   pending = pending.filter(p => p.key !== key);
   pending.push(op);
@@ -519,6 +560,10 @@ function diffToQueue(){
     if (shadow.t.get(t.id) !== j){ enqueue({op:"upsertTask", id:t.id, row}); shadow.t.set(t.id, j); changed = true; } });
   [...shadow.t.keys()].forEach(id => { if (!seenT.has(id)){ enqueue({op:"deleteTask", id}); shadow.t.delete(id); changed = true; } });
   [...shadow.l.keys()].forEach(id => { if (!seenL.has(id)){ enqueue({op:"deleteList", id}); shadow.l.delete(id); changed = true; } });
+  const seenA = new Set();
+  state.absences.forEach(a => { const row = absenceToRow(a), j = JSON.stringify(row); seenA.add(a.id);
+    if (shadow.a.get(a.id) !== j){ enqueue({op:"upsertAbsence", id:a.id, row}); shadow.a.set(a.id, j); changed = true; } });
+  [...shadow.a.keys()].forEach(id => { if (!seenA.has(id)){ enqueue({op:"deleteAbsence", id}); shadow.a.delete(id); changed = true; } });
   if (changed){ savePending(); scheduleFlush(); }
 }
 function scheduleFlush(ms){ clearTimeout(flushTimer); flushTimer = setTimeout(flush, ms == null ? 800 : ms); }
@@ -545,15 +590,16 @@ async function loadRemote(initial){
     const j = await api("load");
     const tasks = (j.tasks || []).map(rowToTask);
     const lists = (j.lists || []).map(r => ({id:r.id, name:r.nombre}));
+    const absences = (j.absences || []).map(rowToAbsence);
     const firstTime = !localStorage.getItem(LS_MIGR);
     localStorage.setItem(LS_MIGR, "1");
     if (firstTime && !tasks.length && !lists.length && (state.tasks.length || state.lists.length)){
-      shadow = {t:new Map(), l:new Map()};
+      shadow = {t:new Map(), l:new Map(), a:new Map()};
       diffToQueue();
       toast("Subiendo tus " + state.tasks.length + " tareas existentes a Google Sheets.");
       return;
     }
-    state = normalize({lists, tasks});
+    state = normalize({lists, tasks, absences});
     if (selected && !byId(selected)) selected = null;
     saveLocal(); snapshotShadow();
     const active = document.activeElement;
@@ -608,7 +654,7 @@ async function logout(){
   try { await api("logout"); } catch(e){}
   token = ""; pending = []; selected = null;
   ["mis-tareas-v1", "mis-tareas-token", "mis-tareas-pendientes"].forEach(k => localStorage.removeItem(k));
-  state = normalize(null); snapshotShadow(); view = "myday";
+  state = normalize(null); snapshotShadow(); view = "myday"; leaveEdit = null;
   showLogin("");
 }
 
@@ -664,6 +710,7 @@ function renderSide(){
     + navBtn("calendar", I.month, "ico-month", "Calendario", 0)
     + navBtn("list:tasks", I.home, "ico-home", "Tareas", countOpen("list:tasks"))
     + navBtn("report", I.report, "ico-report", "Informe del día", 0)
+    + navBtn("leave", I.leave, "ico-leave", "Vacaciones y permisos", 0)
     + "<hr>";
   state.lists.forEach(l => { h += navBtn("list:"+l.id, I.list, "ico-list", l.name, countOpen("list:"+l.id)); });
   document.getElementById("nav").innerHTML = h;
@@ -720,6 +767,7 @@ function renderMain(){
   sub.textContent = "";
   if (view === "report"){ renderReport(); return; }
   if (view === "calendar"){ renderCalendar(); return; }
+  if (view === "leave"){ renderLeave(); return; }
 
   let name = {myday:"Mi día",important:"Importante",planned:"Planificado",search:"Buscar"}[view] || listName(view.slice(5));
   if (view === "search") name = "Buscar: " + query;
@@ -847,17 +895,87 @@ function renderCalendar(){
     const gh = ghosts[k] || [];
     const hol = holidayName(k);
     const dayCls = hol ? ' holiday' : isWeekend(k) ? ' weekend' : '';
-    const holHtml = hol ? '<div class="cal-hol">'+esc(hol)+'</div>' : '';
+    const abs = absenceOn(k);
+    const holHtml = (hol ? '<div class="cal-hol">'+esc(hol)+'</div>' : '') + (abs ? '<div class="cal-abs">'+esc(abs.type)+'</div>' : '');
     const html = items.map(chip).join("") + gh.map(ghostChip).join("");
-    grid += '<div class="cal-cell'+dayCls+(out?' out':'')+(k===tt?' is-today':'')+'"'+(hol?' title="Feriado: '+esc(hol)+'"':'')+'><div class="cal-num">'+d.getDate()+'</div>'+holHtml+html+'</div>';
-    if (!out && (items.length || gh.length || hol)) agenda += '<div class="ag-day'+(hol?' holiday':'')+(k===tt?' is-today':'')+'"><div class="ag-h">'+esc(fmtLong(k))+(hol?' · Feriado':'')+'</div>'+holHtml+html+'</div>';
+    grid += '<div class="cal-cell'+dayCls+(abs&&!hol?' absent':'')+(out?' out':'')+(k===tt?' is-today':'')+'"'+(hol?' title="Feriado: '+esc(hol)+'"':'')+'><div class="cal-num">'+d.getDate()+'</div>'+holHtml+html+'</div>';
+    if (!out && (items.length || gh.length || hol || abs)) agenda += '<div class="ag-day'+(hol?' holiday':abs?' absent':'')+(k===tt?' is-today':'')+'"><div class="ag-h">'+esc(fmtLong(k))+(hol?' · Feriado':'')+'</div>'+holHtml+html+'</div>';
   }
   const lg = s => '<span><i class="lg-'+s+'"></i>'+ST_LABEL[s]+' <b>'+counts[s]+'</b></span>';
   document.getElementById("body").innerHTML =
-    '<div class="legend">'+lg("ok")+lg("doing")+lg("late")+lg("wait")+'<span><i class="lg-ghost"></i>Repetición programada</span><span><i class="lg-hol"></i>Feriado</span><span><i class="lg-we"></i>Fin de semana</span></div>'
+    '<div class="legend">'+lg("ok")+lg("doing")+lg("late")+lg("wait")+'<span><i class="lg-ghost"></i>Repetición programada</span><span><i class="lg-hol"></i>Feriado</span><span><i class="lg-abs"></i>Vacaciones o permiso</span><span><i class="lg-we"></i>Fin de semana</span></div>'
     + '<div class="cal-week"><span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span></div>'
     + '<div class="cal-grid">'+grid+'</div>'
     + '<div class="agenda">'+(agenda || '<p class="none">No hay tareas este mes.</p>')+'</div>';
+}
+
+/* ---------- Vacaciones y permisos ---------- */
+const fmtRange = (a, b) => parse(a).toLocaleDateString("es-CL",{weekday:"short",day:"numeric",month:"short",year:"numeric"})
+  + (a === b ? "" : " al " + parse(b).toLocaleDateString("es-CL",{weekday:"short",day:"numeric",month:"short",year:"numeric"}));
+const returnDay = to => nextBusinessDay(addDays(to,1));
+function leaveCheck(d){
+  if (!d.from || !d.to) return {ok:false, msg:"Elige la fecha de inicio y el último día de ausencia."};
+  if (d.to < d.from) return {ok:false, msg:"El último día no puede ser anterior al primero."};
+  const clash = state.absences.find(a => a.id !== leaveEdit && a.from <= d.to && d.from <= a.to);
+  if (clash) return {ok:false, msg:"Se cruza con " + clash.type.toLowerCase() + " del " + fmtRange(clash.from, clash.to) + "."};
+  const n = countBusinessDays(d.from, d.to);
+  return {ok:true, msg:n + (n === 1 ? " día hábil" : " días hábiles") + ". Vuelves a trabajar el " + fmtLong(returnDay(d.to)) + "."};
+}
+function updateLeaveInfo(){
+  const el = document.getElementById("lvInfo"); if (!el) return;
+  const c = leaveCheck(leaveDraft);
+  el.textContent = (leaveDraft.from || leaveDraft.to) ? c.msg : "";
+  el.className = "lv-info" + (c.ok || !(leaveDraft.from && leaveDraft.to) ? "" : " err");
+}
+function renderLeave(){
+  document.getElementById("title").value = "Vacaciones y permisos";
+  document.getElementById("subtitle").textContent = "Los días que marques aquí no cuentan como hábiles: las repeticiones se corren al día en que vuelves";
+  const d = leaveDraft, tt = today();
+  const typeOpts = LEAVE_TYPES.map(x => '<option'+(d.type===x?' selected':'')+'>'+esc(x)+'</option>').join("");
+  const list = state.absences.slice().sort((a,b) => b.from.localeCompare(a.from));
+  const row = a => { const n = countBusinessDays(a.from, a.to);
+    return '<div class="lv-row'+(a.to < tt ? ' past' : '')+'" data-id="'+esc(a.id)+'"><span class="lv-chip">'+esc(a.type)+'</span>'
+      + '<div class="lv-main"><div>'+esc(fmtRange(a.from, a.to))+'</div><small>'+n+(n===1?' día hábil':' días hábiles')+' · vuelves el '+esc(fmtShort(returnDay(a.to)))+(a.note?' · '+esc(a.note):'')+'</small></div>'
+      + '<button data-act="lvEdit">Editar</button><button class="del" data-act="lvDel">Eliminar</button></div>'; };
+  document.getElementById("body").innerHTML = '<div class="leave">'
+    + '<div class="rep-sec"><h3>'+(leaveEdit ? 'Editar ausencia' : 'Agregar ausencia')+'</h3>'
+    + '<div class="lf-grid">'
+    + '<label>Tipo<select id="lvType">'+typeOpts+'</select></label>'
+    + '<label>Primer día<input type="date" id="lvFrom" value="'+esc(d.from)+'"></label>'
+    + '<label>Último día de ausencia<input type="date" id="lvTo" value="'+esc(d.to)+'"></label>'
+    + '<label class="wide">Nota (opcional)<input id="lvNote" value="'+esc(d.note)+'" placeholder="Ej.: vacaciones de fin de año" autocomplete="off"></label>'
+    + '</div><p class="lv-info" id="lvInfo"></p>'
+    + '<div class="lf-btns"><button class="primary" data-act="lvSave">'+(leaveEdit ? 'Guardar cambios' : 'Agregar')+'</button>'
+    + (leaveEdit ? '<button class="secondary" data-act="lvCancel">Cancelar</button>' : '') + '</div></div>'
+    + '<div class="rep-sec"><h3>Registradas <span class="n">'+list.length+'</span></h3>'
+    + (list.length ? '<div>'+list.map(row).join("")+'</div>' : '<p class="none">Aún no tienes vacaciones ni permisos registrados.</p>')
+    + '</div></div>';
+  updateLeaveInfo();
+}
+async function leaveAction(act, id){
+  if (act === "lvSave"){
+    const c = leaveCheck(leaveDraft);
+    if (!c.ok){ updateLeaveInfo(); toast(c.msg); return; }
+    const data = {type:leaveDraft.type, from:leaveDraft.from, to:leaveDraft.to, note:leaveDraft.note.trim()};
+    if (leaveEdit){ Object.assign(state.absences.find(a => a.id === leaveEdit) || {}, data); toast("Cambios guardados."); }
+    else { state.absences.push({id:uid(), ...data}); toast(data.type + " registrado: " + c.msg); }
+    leaveEdit = null; leaveDraft = {type:"Vacaciones", from:"", to:"", note:""};
+    commit();
+  }
+  if (act === "lvCancel"){ leaveEdit = null; leaveDraft = {type:"Vacaciones", from:"", to:"", note:""}; renderMain(); }
+  if (act === "lvEdit"){
+    const a = state.absences.find(x => x.id === id); if (!a) return;
+    leaveEdit = a.id; leaveDraft = {type:a.type, from:a.from, to:a.to, note:a.note}; renderMain();
+    document.getElementById("body").scrollTop = 0;
+  }
+  if (act === "lvDel"){
+    const a = state.absences.find(x => x.id === id); if (!a) return;
+    const ok = await confirmBox("¿Eliminar " + a.type.toLowerCase() + " del " + fmtRange(a.from, a.to) + "?", "Eliminar");
+    if (!ok) return;
+    state.absences = state.absences.filter(x => x.id !== id);
+    if (leaveEdit === id){ leaveEdit = null; leaveDraft = {type:"Vacaciones", from:"", to:"", note:""}; }
+    commit();
+  }
 }
 
 /* ---------- Informe ---------- */
@@ -1011,6 +1129,7 @@ document.getElementById("headActions").addEventListener("click", async e => {
 const bodyEl = document.getElementById("body");
 bodyEl.addEventListener("keydown", e => {
   if (e.target.id === "addInput" && e.key === "Enter"){ addTask(e.target.value); }
+  if (e.target.id === "lvNote" && e.key === "Enter"){ leaveAction("lvSave"); }
   if (e.target.classList.contains("tbody") && (e.key === "Enter" || e.key === " ")){
     e.preventDefault(); openTask(e.target.closest(".task").dataset.id);
   }
@@ -1025,9 +1144,21 @@ bodyEl.addEventListener("click", e => {
     case "toggleDone": showDone = !showDone; renderMain(); break;
     case "addMyDay": { const t = byId(id); t.myDay = today(); commit(); break; }
     case "copyRep": copyReport(); break;
+    case "lvSave": case "lvCancel": case "lvEdit": case "lvDel": leaveAction(b.dataset.act, id); break;
   }
 });
+function readLeaveForm(e){
+  const map = {lvType:"type", lvFrom:"from", lvTo:"to", lvNote:"note"};
+  if (!map[e.target.id]) return;
+  leaveDraft[map[e.target.id]] = e.target.value;
+  if (e.target.id === "lvFrom" && leaveDraft.from && (!leaveDraft.to || leaveDraft.to < leaveDraft.from)) {
+    leaveDraft.to = leaveDraft.from; document.getElementById("lvTo").value = leaveDraft.to;
+  }
+  updateLeaveInfo();
+}
+bodyEl.addEventListener("input", readLeaveForm);
 bodyEl.addEventListener("change", e => {
+  readLeaveForm(e);
   if (e.target.id === "repDate"){ reportDate = e.target.value || today(); renderReport(); }
 });
 
