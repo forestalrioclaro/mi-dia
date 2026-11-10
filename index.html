@@ -211,6 +211,26 @@ svg{display:block;flex:none}
   .agenda .cal-task{white-space:normal;font-size:14px;padding:7px 9px}
 }
 
+/* Repetición por días y tareas programadas */
+.days{display:flex;gap:6px;padding:0 14px 12px;flex-wrap:wrap}
+.days button{width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:var(--bg);font-weight:600;font-size:13px}
+.days button.on{background:var(--pine);border-color:var(--pine);color:var(--pine-ink)}
+.cal-task.ghost{background:transparent;border:1px dashed var(--line);border-left:3px solid var(--muted);color:var(--muted)}
+.lg-ghost{background:transparent!important;border:1px dashed var(--muted)}
+
+/* Ingreso */
+.app[hidden],.login[hidden]{display:none}
+.login{position:fixed;inset:0;display:grid;place-items:center;padding:20px;background:var(--bg)}
+.login-card{width:100%;max-width:380px;background:var(--surface);border-radius:16px;box-shadow:var(--shadow);padding:28px;display:flex;flex-direction:column;gap:14px}
+.login-card .brand{padding:0}
+.login-card h1{font-size:24px;margin:6px 0 0;letter-spacing:-.02em}
+.login-card .sub{margin:0;color:var(--muted)}
+.login-card label{display:flex;flex-direction:column;gap:6px;font-weight:600;font-size:14px}
+.login-card input{border:1px solid var(--line);border-radius:9px;padding:10px 12px;background:var(--bg);font-weight:400}
+.l-err{color:var(--danger);margin:0;min-height:1.3em;font-size:14px}
+.login-card .primary{justify-content:center}
+.primary:disabled{opacity:.6;cursor:default}
+
 /* Modal + toast */
 .modal-bg{position:fixed;inset:0;background:rgba(10,15,12,.45);display:grid;place-items:center;z-index:50;padding:20px}
 .modal{background:var(--surface);border-radius:14px;box-shadow:var(--shadow);padding:20px;max-width:380px;width:100%}
@@ -237,15 +257,26 @@ svg{display:block;flex:none}
 </style>
 </head>
 <body>
-<div class="app">
+<div class="login" id="login" hidden>
+  <form class="login-card" id="loginForm" novalidate>
+    <div class="brand"><span class="mark" id="loginMark"></span>Mis tareas</div>
+    <h1>Ingresa a tus tareas</h1>
+    <p class="sub">Tus tareas están protegidas. Ingresa con tu correo y contraseña.</p>
+    <label>Correo<input type="email" id="lUser" autocomplete="username" required></label>
+    <label>Contraseña<input type="password" id="lPass" autocomplete="current-password" required></label>
+    <p class="l-err" id="lErr" role="alert"></p>
+    <button class="primary" type="submit" id="lBtn">Ingresar</button>
+  </form>
+</div>
+<div class="app" id="app" hidden>
   <aside class="side" id="side">
     <div class="brand"><span class="mark" id="brandMark"></span>Mis tareas</div>
     <label class="search"><span id="searchIco"></span><input id="q" type="search" placeholder="Buscar" aria-label="Buscar tareas"></label>
     <nav class="nav" id="nav"></nav>
     <div class="side-foot">
       <button class="ghost" id="newList"></button>
-      <div class="row"><button class="ghost" id="backupBtn"></button></div>
-      <div class="sync" id="sync"><span class="dot"></span><span id="syncTxt">Guardado en este navegador</span></div>
+      <div class="row"><button class="ghost" id="backupBtn"></button><button class="ghost" id="logoutBtn"></button></div>
+      <div class="sync" id="sync"><span class="dot"></span><span id="syncTxt">Conectando…</span></div>
     </div>
   </aside>
   <div class="scrim" id="scrim"></div>
@@ -312,8 +343,21 @@ function dueLabel(s){
   return fmtShort(s);
 }
 function nextMonday(){ const d = new Date(); const k = (8 - d.getDay()) % 7 || 7; d.setDate(d.getDate()+k); return ymd(d); }
-function nextRepeat(s, rep){
+const DAY_SHORT = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
+const DAY_LETTER = ["D","L","M","X","J","V","S"];
+const DAY_ORDER = [1,2,3,4,5,6,0];
+function firstOnOrAfter(s, days){
   const d = parse(s);
+  for (let i = 0; i < 7; i++){ if (days.includes(d.getDay())) return ymd(d); d.setDate(d.getDate()+1); }
+  return s;
+}
+function nextRepeat(s, rep, days){
+  const d = parse(s);
+  if (rep === "days"){
+    if (!days || !days.length){ d.setDate(d.getDate()+7); return ymd(d); }
+    for (let i = 0; i < 7; i++){ d.setDate(d.getDate()+1); if (days.includes(d.getDay())) break; }
+    return ymd(d);
+  }
   if (rep === "daily") d.setDate(d.getDate()+1);
   else if (rep === "weekdays"){ do { d.setDate(d.getDate()+1); } while (d.getDay()===0 || d.getDay()===6); }
   else if (rep === "weekly") d.setDate(d.getDate()+7);
@@ -321,10 +365,20 @@ function nextRepeat(s, rep){
     const last = new Date(d.getFullYear(), d.getMonth()+1, 0).getDate(); d.setDate(Math.min(day,last)); }
   return ymd(d);
 }
-const REPEAT = {"":"No se repite",daily:"Todos los días",weekdays:"Días laborables",weekly:"Cada semana",monthly:"Cada mes"};
+const REPEAT = {"":"No se repite",daily:"Todos los días",weekdays:"Días laborables (lun a vie)",days:"Días específicos de la semana",weekly:"Cada semana",monthly:"Cada mes"};
+const REPEAT_BY_LABEL = Object.fromEntries(Object.entries(REPEAT).map(([k,v]) => [v,k]));
+function repeatText(t){
+  if (t.repeat === "days") return t.repeatDays.length ? DAY_ORDER.filter(d => t.repeatDays.includes(d)).map(d => DAY_SHORT[d]).join(", ") : REPEAT.days;
+  return REPEAT[t.repeat] || "";
+}
 
 /* ---------- Estado ---------- */
+/* Pega aquí la URL de tu Apps Script (termina en /exec) */
+const API_URL = "https://script.google.com/macros/s/AKfycbyk8duvfjGvDbAx9GdqL_-gDanyN7n2Y7gMGTg0Hq6LCCHvkLryPPdApM-Vu2XJj_aj/exec";
 const LS_KEY = "mis-tareas-v1";
+const LS_TOKEN = "mis-tareas-token";
+const LS_PEND = "mis-tareas-pendientes";
+const LS_MIGR = "mis-tareas-en-sheets";
 const uid = () => Math.random().toString(36).slice(2,9) + Date.now().toString(36).slice(-5);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
@@ -334,7 +388,8 @@ function normalize(s){
   const ids = new Set(["tasks", ...lists.map(l => l.id)]);
   const tasks = Array.isArray(s.tasks) ? s.tasks.filter(t => t && t.id).map(t => ({
     id:String(t.id), title:String(t.title||""), done:!!t.done, important:!!t.important, doing:!!t.doing,
-    myDay:t.myDay||"", due:t.due||"", repeat:REPEAT[t.repeat] ? t.repeat : "",
+    myDay:t.myDay||"", due:t.due||"", repeat:(t.repeat && REPEAT[t.repeat]) ? t.repeat : "",
+    repeatDays:Array.isArray(t.repeatDays) ? [...new Set(t.repeatDays.map(Number).filter(n => n >= 0 && n <= 6))] : [],
     listId: ids.has(t.listId) ? t.listId : "tasks", notes:String(t.notes||""),
     steps:Array.isArray(t.steps) ? t.steps.map(x => ({id:String(x.id||uid()), title:String(x.title||""), done:!!x.done})) : [],
     createdAt:+t.createdAt || Date.now(), completedAt:+t.completedAt || 0
@@ -354,77 +409,171 @@ let reportDate = today();
 let calMonth = today().slice(0,8) + "01";
 let currentDay = today();
 
-/* ---------- Guardado en la cuenta (db) ---------- */
-const remote = { ref:null, writing:false, dirty:false, timer:null, lastJson:"", ready:false };
+/* ---------- Google Sheets: sesión y sincronización ---------- */
+let token = localStorage.getItem(LS_TOKEN) || "";
+let pending = (() => { try { return JSON.parse(localStorage.getItem(LS_PEND) || "[]"); } catch(e){ return []; } })();
+let shadow = {t:new Map(), l:new Map()};
+let flushing = false, flushTimer = null, retryDelay = 2000, lastError = false;
+
 function setSync(kind, txt){
   const el = document.getElementById("sync");
   el.className = "sync " + (kind||"");
   document.getElementById("syncTxt").textContent = txt;
 }
-function scheduleRemote(){
-  if (!remote.ref) return;
-  remote.dirty = true;
-  clearTimeout(remote.timer);
-  remote.timer = setTimeout(flushRemote, 700);
+function updateSync(){
+  if (flushing) setSync("", "Guardando en Google Sheets…");
+  else if (pending.length) setSync(lastError ? "err" : "", (lastError ? "Sin conexión: " : "") + pending.length + (pending.length === 1 ? " cambio por subir" : " cambios por subir"));
+  else setSync("ok", "Guardado en Google Sheets");
 }
-async function flushRemote(){
-  remote.timer = null;
-  if (!remote.ref || remote.writing || !remote.dirty) return;
-  remote.writing = true; remote.dirty = false;
-  const json = JSON.stringify(state);
-  remote.lastJson = json;
-  try {
-    await remote.ref.set({json, savedAt:Date.now()});
-    setSync("ok","Guardado en tu cuenta");
-  } catch(e){
-    const code = e && e.code;
-    if (code === "unavailable"){ remote.dirty = true; setTimeout(flushRemote, 1500 + Math.random()*1500); }
-    else if (code === "quota_exceeded"){ toast("Se llenó el espacio. Elimina tareas completadas antiguas."); }
-    setSync("err","No se pudo guardar en tu cuenta; quedó en este navegador");
+const apiReady = () => /^https:\/\/script\.google\.com\//.test(API_URL);
+async function api(action, data){
+  const res = await fetch(API_URL, {method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"},
+    body:JSON.stringify(Object.assign({action, token}, data || {}))});
+  if (!res.ok) throw {error:"http"};
+  const j = await res.json();
+  if (!j.ok){
+    if (j.error === "auth" && action !== "login") sessionExpired();
+    throw {error:j.error || "server", auth:j.error === "auth"};
   }
-  remote.writing = false;
-  if (remote.dirty && !remote.timer) flushRemote();
+  return j;
 }
-async function initRemote(){
-  if (!window.claude || typeof window.claude.use !== "function") return;
+
+/* Conversión entre tarea y fila de la planilla */
+const stamp = ms => { if (!ms) return ""; const d = new Date(ms); return ymd(d)+" "+pad(d.getHours())+":"+pad(d.getMinutes()); };
+function taskToRow(t){
+  return {id:t.id, titulo:t.title, lista:listName(t.listId),
+    estado:t.done ? "Completada" : t.doing ? "En curso" : "Pendiente",
+    importante:t.important ? "Sí" : "No", mi_dia:t.myDay, vence:t.due,
+    repetir:t.repeat ? REPEAT[t.repeat] : "", dias_repeticion:t.repeat === "days" ? repeatText(t) : "",
+    nota:t.notes, pasos:t.steps.length ? JSON.stringify(t.steps) : "",
+    creada:stamp(t.createdAt), completada:stamp(t.completedAt), lista_id:t.listId,
+    creada_ms:String(t.createdAt), completada_ms:t.completedAt ? String(t.completedAt) : ""};
+}
+function rowToTask(r){
+  let steps = []; try { steps = r.pasos ? JSON.parse(r.pasos) : []; } catch(e){}
+  return {id:r.id, title:r.titulo, done:r.estado === "Completada", doing:r.estado === "En curso",
+    important:r.importante === "Sí", myDay:r.mi_dia, due:r.vence, repeat:REPEAT_BY_LABEL[r.repetir] || "",
+    repeatDays:String(r.dias_repeticion||"").split(",").map(x => DAY_SHORT.indexOf(x.trim())).filter(n => n >= 0),
+    listId:r.lista_id || "tasks", notes:r.nota, steps, createdAt:+r.creada_ms, completedAt:+r.completada_ms};
+}
+const listToRow = l => ({id:l.id, nombre:l.name});
+
+/* Cola de cambios: se compara el estado con lo último enviado y se suben solo las diferencias */
+function snapshotShadow(){
+  shadow.t = new Map(state.tasks.map(t => [t.id, JSON.stringify(taskToRow(t))]));
+  shadow.l = new Map(state.lists.map(l => [l.id, JSON.stringify(listToRow(l))]));
+}
+function savePending(){ try { localStorage.setItem(LS_PEND, JSON.stringify(pending)); } catch(e){} }
+function enqueue(op){
+  const key = (op.op.endsWith("Task") ? "t:" : "l:") + op.id;
+  op.key = key;
+  pending = pending.filter(p => p.key !== key);
+  pending.push(op);
+}
+function diffToQueue(){
+  let changed = false;
+  const seenT = new Set(), seenL = new Set();
+  state.lists.forEach(l => { const j = JSON.stringify(listToRow(l)); seenL.add(l.id);
+    if (shadow.l.get(l.id) !== j){ enqueue({op:"upsertList", id:l.id, row:listToRow(l)}); shadow.l.set(l.id, j); changed = true; } });
+  state.tasks.forEach(t => { const row = taskToRow(t), j = JSON.stringify(row); seenT.add(t.id);
+    if (shadow.t.get(t.id) !== j){ enqueue({op:"upsertTask", id:t.id, row}); shadow.t.set(t.id, j); changed = true; } });
+  [...shadow.t.keys()].forEach(id => { if (!seenT.has(id)){ enqueue({op:"deleteTask", id}); shadow.t.delete(id); changed = true; } });
+  [...shadow.l.keys()].forEach(id => { if (!seenL.has(id)){ enqueue({op:"deleteList", id}); shadow.l.delete(id); changed = true; } });
+  if (changed){ savePending(); scheduleFlush(); }
+}
+function scheduleFlush(ms){ clearTimeout(flushTimer); flushTimer = setTimeout(flush, ms == null ? 800 : ms); }
+async function flush(){
+  flushTimer = null;
+  if (flushing || !pending.length || !token){ updateSync(); return; }
+  flushing = true; updateSync();
+  const batch = pending.slice();
   try {
-    const [db, user] = await Promise.all([window.claude.use("db"), window.claude.use("user")]);
-    if (!db || !user) return;
-    const id = await user.id();
-    if (!id) return;
-    remote.ref = db.doc("data/users/" + id + "/state");
-    setSync("","Conectando con tu cuenta…");
-    const t10 = setTimeout(() => { if (!remote.ready) setSync("err","Sin conexión; guardando en este navegador"); }, 10000);
-    remote.ref.onSnapshot(snap => {
-      if (snap.metadata && snap.metadata.hasPendingWrites) return;
-      if (!snap.exists){
-        if (snap.metadata && snap.metadata.fromCache) return;
-        clearTimeout(t10); remote.ready = true;
-        if (state.tasks.length || state.lists.length){ remote.dirty = true; flushRemote(); }
-        else setSync("ok","Guardado en tu cuenta");
-        return;
-      }
-      clearTimeout(t10); remote.ready = true;
-      setSync("ok","Guardado en tu cuenta");
-      if (remote.dirty || remote.writing || remote.timer) return;
-      const d = snap.data() || {};
-      if (typeof d.json === "string" && d.json !== remote.lastJson){
-        try {
-          state = normalize(JSON.parse(d.json));
-          remote.lastJson = d.json;
-          saveLocal();
-          if (selected && !state.tasks.some(t => t.id === selected)) selected = null;
-          const active = document.activeElement;
-          const typing = active && document.getElementById("detail").contains(active);
-          renderSide(); renderMain(); if (!typing) renderDetail();
-        } catch(e){}
-      }
-    }, () => setSync("err","Sin conexión; guardando en este navegador"));
-  } catch(e){}
+    await api("sync", {ops:batch.map(p => ({op:p.op, id:p.id, row:p.row}))});
+    pending = pending.filter(p => !batch.includes(p));
+    savePending(); retryDelay = 2000; lastError = false;
+  } catch(e){
+    if (!e || !e.auth){ lastError = true; scheduleFlush(retryDelay); retryDelay = Math.min(retryDelay * 2, 60000); }
+  }
+  flushing = false; updateSync();
+  if (pending.length && !flushTimer && !lastError) scheduleFlush(300);
+}
+async function loadRemote(initial){
+  if (!token) return;
+  if (pending.length){ await flush(); if (pending.length) return; }
+  if (initial) setSync("", "Cargando desde Google Sheets…");
+  try {
+    const j = await api("load");
+    const tasks = (j.tasks || []).map(rowToTask);
+    const lists = (j.lists || []).map(r => ({id:r.id, name:r.nombre}));
+    const firstTime = !localStorage.getItem(LS_MIGR);
+    localStorage.setItem(LS_MIGR, "1");
+    if (firstTime && !tasks.length && !lists.length && (state.tasks.length || state.lists.length)){
+      shadow = {t:new Map(), l:new Map()};
+      diffToQueue();
+      toast("Subiendo tus " + state.tasks.length + " tareas existentes a Google Sheets.");
+      return;
+    }
+    state = normalize({lists, tasks});
+    if (selected && !byId(selected)) selected = null;
+    saveLocal(); snapshotShadow();
+    const active = document.activeElement;
+    const typing = active && document.getElementById("detail").contains(active);
+    renderSide(); renderMain(); if (!typing) renderDetail();
+    lastError = false; updateSync();
+  } catch(e){
+    if (!e || !e.auth){ lastError = true; setSync("err", "Sin conexión con Google Sheets"); }
+  }
+}
+
+/* Ingreso y salida */
+function showLogin(msg){
+  document.getElementById("app").hidden = true;
+  document.getElementById("login").hidden = false;
+  document.getElementById("lErr").textContent = msg || "";
+  document.getElementById("lPass").value = "";
+  setTimeout(() => document.getElementById(document.getElementById("lUser").value ? "lPass" : "lUser").focus(), 50);
+}
+function showApp(){
+  document.getElementById("login").hidden = true;
+  document.getElementById("app").hidden = false;
+  renderSide(); renderMain(); renderDetail(); updateSync();
+}
+function sessionExpired(){
+  token = ""; localStorage.removeItem(LS_TOKEN);
+  showLogin("Tu sesión expiró. Ingresa de nuevo.");
+}
+document.getElementById("loginForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const err = document.getElementById("lErr"), btn = document.getElementById("lBtn");
+  const usuario = document.getElementById("lUser").value.trim(), clave = document.getElementById("lPass").value;
+  if (!apiReady()){ err.textContent = "Falta configurar la dirección de Google Sheets (API_URL) en index.html."; return; }
+  if (!usuario || !clave){ err.textContent = "Escribe tu correo y tu contraseña."; return; }
+  btn.disabled = true; btn.textContent = "Ingresando…"; err.textContent = "";
+  try {
+    const j = await api("login", {usuario, clave});
+    token = j.token; localStorage.setItem(LS_TOKEN, token);
+    showApp(); await loadRemote(true);
+  } catch(ex){
+    err.textContent = ex && ex.error === "credenciales" ? "Correo o contraseña incorrectos."
+      : ex && ex.error === "locked" ? "Demasiados intentos fallidos. Espera 15 minutos e inténtalo de nuevo."
+      : "No se pudo conectar con Google Sheets. Revisa tu conexión.";
+  }
+  btn.disabled = false; btn.textContent = "Ingresar";
+});
+async function logout(){
+  if (pending.length){
+    const ok = await confirmBox("Hay " + pending.length + " cambios que aún no se suben a Google Sheets. Si cierras sesión ahora se perderán.", "Cerrar sesión igual");
+    if (!ok) return;
+  }
+  try { await api("logout"); } catch(e){}
+  token = ""; pending = []; selected = null;
+  ["mis-tareas-v1", "mis-tareas-token", "mis-tareas-pendientes"].forEach(k => localStorage.removeItem(k));
+  state = normalize(null); snapshotShadow(); view = "myday";
+  showLogin("");
 }
 
 function commit(opts){
-  saveLocal(); scheduleRemote();
+  saveLocal(); diffToQueue(); updateSync();
   renderSide();
   if (!opts || !opts.skipMain) renderMain();
   if (!opts || !opts.skipDetail) renderDetail();
@@ -490,8 +639,9 @@ function taskRow(t, showList){
   if (t.steps.length){ const d = t.steps.filter(s=>s.done).length; meta.push('<span>'+I.steps+d+' de '+t.steps.length+'</span>'); }
   if (t.due){
     const cls = (!t.done && t.due < tt) ? "late" : (t.due === tt ? "today" : "");
-    meta.push('<span class="'+cls+'">'+I.cal.replace('width="20" height="20"','width="13" height="13"')+esc(dueLabel(t.due))+(t.repeat?' ↻':'')+'</span>');
+    meta.push('<span class="'+cls+'">'+I.cal.replace('width="20" height="20"','width="13" height="13"')+esc(dueLabel(t.due))+'</span>');
   }
+  if (t.repeat && !t.done) meta.push('<span>↻ '+esc(repeatText(t))+'</span>');
   if (t.notes.trim()) meta.push('<span>'+I.note+'Nota</span>');
   return '<li class="task'+(t.done?' done':'')+(selected===t.id?' sel':'')+'" data-id="'+esc(t.id)+'">'
     + '<button class="chk" data-act="toggle" aria-label="'+(t.done?'Marcar como pendiente':'Marcar como completada')+'">'+I.check+'</button>'
@@ -602,6 +752,7 @@ function renderDetail(){
       + '<div class="field"><label for="dDue">Vence</label><input type="date" id="dDue" value="'+esc(t.due)+'"></div>'
       + '<div class="quick"><button data-act="due" data-v="0">Hoy</button><button data-act="due" data-v="1">Mañana</button><button data-act="due" data-v="mon">Próximo lunes</button>'+(t.due?'<button data-act="due" data-v="">Quitar fecha</button>':'')+'</div>'
       + '<div class="field"><label for="dRep">Repetir</label><select id="dRep">'+repOpts+'</select></div>'
+      + (t.repeat === "days" ? '<div class="days" role="group" aria-label="Días de repetición">'+DAY_ORDER.map(d => '<button data-act="day" data-d="'+d+'" class="'+(t.repeatDays.includes(d)?'on':'')+'" aria-pressed="'+t.repeatDays.includes(d)+'" title="'+DAY_SHORT[d]+'">'+DAY_LETTER[d]+'</button>').join("")+'</div>' : '')
       + '<div class="field"><label for="dList">Lista</label><select id="dList">'+listOpts+'</select></div>'
     + '</div>'
     + '<div class="card notes"><textarea id="dNotes" placeholder="Agregar nota" aria-label="Nota">'+esc(t.notes)+'</textarea></div>'
@@ -640,17 +791,25 @@ function renderCalendar(){
   const tt = today();
   const counts = {ok:0, doing:0, late:0, wait:0};
   const chip = t => { const s = calStatus(t);
-    return '<button class="cal-task st-'+s+(selected===t.id?' sel':'')+'" data-act="open" data-id="'+esc(t.id)+'" title="'+esc(t.title+' — '+ST_LABEL[s])+'">'+esc(t.title)+'</button>'; };
+    return '<button class="cal-task st-'+s+(selected===t.id?' sel':'')+'" data-act="open" data-id="'+esc(t.id)+'" title="'+esc(t.title+' — '+ST_LABEL[s])+'">'+(t.repeat&&!t.done?'↻ ':'')+esc(t.title)+'</button>'; };
+  const ghostChip = t => '<button class="cal-task ghost" data-act="open" data-id="'+esc(t.id)+'" title="'+esc(t.title+' — Repetición programada ('+repeatText(t)+')')+'">↻ '+esc(t.title)+'</button>';
+  const endKey = ymd(end), ghosts = {};
+  state.tasks.filter(t => !t.done && t.repeat && t.due).forEach(t => {
+    let d = t.due;
+    for (let i = 0; i < 400; i++){ d = nextRepeat(d, t.repeat, t.repeatDays); if (d > endKey) break; (ghosts[d] = ghosts[d] || []).push(t); }
+  });
   let grid = "", agenda = "";
   for (let d = new Date(start); d <= end; d.setDate(d.getDate()+1)){
     const k = ymd(d), items = byDay[k] || [], out = d.getMonth() !== m.getMonth();
     if (!out) items.forEach(t => counts[calStatus(t)]++);
-    grid += '<div class="cal-cell'+(out?' out':'')+(k===tt?' is-today':'')+'"><div class="cal-num">'+d.getDate()+'</div>'+items.map(chip).join("")+'</div>';
-    if (!out && items.length) agenda += '<div class="ag-day'+(k===tt?' is-today':'')+'"><div class="ag-h">'+esc(fmtLong(k))+'</div>'+items.map(chip).join("")+'</div>';
+    const gh = ghosts[k] || [];
+    const html = items.map(chip).join("") + gh.map(ghostChip).join("");
+    grid += '<div class="cal-cell'+(out?' out':'')+(k===tt?' is-today':'')+'"><div class="cal-num">'+d.getDate()+'</div>'+html+'</div>';
+    if (!out && (items.length || gh.length)) agenda += '<div class="ag-day'+(k===tt?' is-today':'')+'"><div class="ag-h">'+esc(fmtLong(k))+'</div>'+html+'</div>';
   }
   const lg = s => '<span><i class="lg-'+s+'"></i>'+ST_LABEL[s]+' <b>'+counts[s]+'</b></span>';
   document.getElementById("body").innerHTML =
-    '<div class="legend">'+lg("ok")+lg("doing")+lg("late")+lg("wait")+'</div>'
+    '<div class="legend">'+lg("ok")+lg("doing")+lg("late")+lg("wait")+'<span><i class="lg-ghost"></i>Repetición programada</span></div>'
     + '<div class="cal-week"><span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span></div>'
     + '<div class="cal-grid">'+grid+'</div>'
     + '<div class="agenda">'+(agenda || '<p class="none">No hay tareas este mes.</p>')+'</div>';
@@ -717,7 +876,7 @@ function setView(v){
 }
 function addTask(title){
   title = title.trim(); if (!title) return;
-  const t = {id:uid(), title, done:false, important:false, doing:false, myDay:"", due:"", repeat:"",
+  const t = {id:uid(), title, done:false, important:false, doing:false, myDay:"", due:"", repeat:"", repeatDays:[],
     listId:"tasks", notes:"", steps:[], createdAt:Date.now(), completedAt:0};
   if (view === "myday") t.myDay = today();
   if (view === "important") t.important = true;
@@ -734,9 +893,10 @@ function toggleTask(id){
   if (t.done) t.doing = false;
   let msg = "";
   if (t.done && t.repeat && t.due){
-    const nd = nextRepeat(t.due, t.repeat);
+    let nd = nextRepeat(t.due, t.repeat, t.repeatDays);
+    for (let i = 0; i < 400 && nd < today(); i++) nd = nextRepeat(nd, t.repeat, t.repeatDays);
     state.tasks.push({...t, id:uid(), done:false, completedAt:0, doing:false, myDay:"", due:nd,
-      steps:t.steps.map(s => ({id:uid(), title:s.title, done:false})), createdAt:Date.now()});
+      repeatDays:t.repeatDays.slice(), steps:t.steps.map(s => ({id:uid(), title:s.title, done:false})), createdAt:Date.now()});
     t.repeat = "";
     msg = "Próxima repetición: " + dueLabel(nd).toLowerCase();
   }
@@ -850,7 +1010,12 @@ detailEl.addEventListener("keydown", e => {
 detailEl.addEventListener("change", e => {
   const t = byId(selected); if (!t) return;
   if (e.target.id === "dDue"){ t.due = e.target.value; commit(); }
-  if (e.target.id === "dRep"){ t.repeat = e.target.value; if (t.repeat && !t.due) t.due = today(); commit(); }
+  if (e.target.id === "dRep"){
+    t.repeat = e.target.value;
+    if (t.repeat === "days" && !t.repeatDays.length) t.repeatDays = [parse(t.due || today()).getDay()];
+    if (t.repeat && !t.due) t.due = t.repeat === "days" ? firstOnOrAfter(today(), t.repeatDays) : today();
+    commit();
+  }
   if (e.target.id === "dList"){ t.listId = e.target.value; commit(); }
 });
 detailEl.addEventListener("focusout", e => {
@@ -870,6 +1035,15 @@ detailEl.addEventListener("click", e => {
     case "due": { const v = b.dataset.v; t.due = v === "" ? "" : v === "mon" ? nextMonday() : addDays(today(), +v); if (!t.due) t.repeat = ""; commit(); break; }
     case "stepToggle": { const s = t.steps.find(x => x.id === stepId); s.done = !s.done; commit(); break; }
     case "stepDel": t.steps = t.steps.filter(x => x.id !== stepId); commit(); break;
+    case "day": {
+      const d = +b.dataset.d;
+      if (t.repeatDays.includes(d)){
+        if (t.repeatDays.length === 1){ toast("Elige al menos un día."); break; }
+        t.repeatDays = t.repeatDays.filter(x => x !== d);
+      } else t.repeatDays = [...t.repeatDays, d];
+      if (t.due && !t.repeatDays.includes(parse(t.due).getDay())) t.due = firstOnOrAfter(t.due < today() ? today() : t.due, t.repeatDays);
+      commit(); break;
+    }
     case "dClose": selected = null; renderMain(); renderDetail(); break;
     case "dDelete": deleteTask(t.id); break;
   }
@@ -894,10 +1068,6 @@ document.getElementById("backupBtn").addEventListener("click", async () => {
 async function exportData(){
   const data = JSON.stringify(state, null, 2);
   const filename = "respaldo-tareas-" + today() + ".json";
-  try {
-    const dl = window.claude && window.claude.use ? await window.claude.use("downloads") : null;
-    if (dl){ await dl.save({filename, data}); return; }
-  } catch(e){ if (e && e.code) { toast("No se descargó el respaldo."); return; } }
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([data],{type:"application/json"}));
   a.download = filename; document.body.appendChild(a); a.click(); a.remove();
@@ -964,8 +1134,14 @@ document.getElementById("searchIco").innerHTML = I.search;
 document.getElementById("burger").innerHTML = I.menu;
 document.getElementById("newList").innerHTML = I.plus + "Nueva lista";
 document.getElementById("backupBtn").innerHTML = I.save + "Respaldo";
-renderSide(); renderMain(); renderDetail();
-initRemote();
+document.getElementById("logoutBtn").innerHTML = I.x + "Cerrar sesión";
+document.getElementById("loginMark").innerHTML = document.getElementById("brandMark").innerHTML;
+document.getElementById("logoutBtn").addEventListener("click", logout);
+document.addEventListener("visibilitychange", () => { if (!document.hidden && token) loadRemote(false); });
+window.addEventListener("online", () => { if (token){ lastError = false; flush(); } });
+snapshotShadow();
+if (token){ showApp(); if (pending.length) flush(); loadRemote(true); }
+else showLogin("");
 })();
 </script>
 </body>
