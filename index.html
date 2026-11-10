@@ -56,7 +56,7 @@ svg{display:block;flex:none}
 .nav-item .count{margin-left:auto;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
 .nav-item .ico-sun{color:var(--amber)} .nav-item .ico-star{color:var(--danger)}
 .nav-item .ico-cal{color:var(--doing)} .nav-item .ico-home{color:var(--pine)}
-.nav-item .ico-list{color:var(--muted)} .nav-item .ico-leave{color:var(--leave)} .nav-item .ico-month{color:var(--doing)} .nav-item .ico-gantt{color:var(--pause)} .nav-item .ico-report{color:var(--pine)}
+.nav-item .ico-list{color:var(--muted)} .nav-item .ico-leave{color:var(--leave)} .nav-item .ico-month{color:var(--doing)} .nav-item .ico-gantt{color:var(--pause)} .nav-item .ico-board{color:var(--pine)} .nav-item .ico-report{color:var(--pine)}
 .nav hr{border:0;border-top:1px solid var(--line);margin:8px 10px}
 .side-foot{border-top:1px solid var(--line);padding:10px 12px;display:flex;flex-direction:column;gap:6px}
 .side-foot .row{display:flex;gap:6px}
@@ -256,6 +256,35 @@ body.cal-resize,body.cal-resize *{cursor:ew-resize!important}
 .gantt .cal-task.cont-r{border-top-right-radius:0;border-bottom-right-radius:0;margin-right:0}
 .g-empty{padding:30px;text-align:center;color:var(--muted)}
 @media (max-width:760px){.gantt{--glab:150px;max-height:none}}
+/* Tablero */
+.kb-filter{border:1px solid var(--line);border-radius:9px;padding:6px 8px;background:var(--surface);font-size:14px}
+.kb{display:flex;gap:12px;overflow-x:auto;align-items:flex-start;padding-bottom:12px}
+.kb-col{flex:0 0 290px;background:var(--gray-soft);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px;max-height:calc(100vh - 190px);border:2px solid transparent}
+.kb-col.doing{background:var(--doing-soft)} .kb-col.paused{background:var(--pause-soft)} .kb-col.done{background:var(--pine-soft)}
+.kb-col.over{border-color:var(--pine);border-style:dashed}
+.kb-head{display:flex;align-items:center;gap:8px;font-weight:700;font-size:13px;padding:2px 2px 4px}
+.kb-pill{color:var(--bg);border-radius:6px;padding:2px 8px;font-size:12px;letter-spacing:.03em;text-transform:uppercase}
+.kb-pill.todo{background:var(--muted)} .kb-pill.doing{background:var(--doing)} .kb-pill.paused{background:var(--pause)} .kb-pill.done{background:var(--pine)}
+.kb-count{color:var(--muted);font-weight:500}
+.kb-list{display:flex;flex-direction:column;gap:8px;overflow-y:auto;min-height:44px;padding:2px}
+.kb-card{background:var(--surface);border-radius:10px;padding:10px 12px;box-shadow:var(--shadow);cursor:grab;border:1px solid transparent;user-select:none;-webkit-user-select:none}
+.kb-card:hover{border-color:var(--line)}
+.kb-card.sel{border-color:var(--pine)}
+.kb-card.late{border-left:3px solid var(--danger)}
+.kb-card.dragging{opacity:.4}
+.kb-title{font-size:14px;overflow-wrap:anywhere}
+.kb-card.done .kb-title{text-decoration:line-through;color:var(--muted)}
+.kb-meta{display:flex;flex-wrap:wrap;gap:6px 10px;margin-top:8px;font-size:12px;color:var(--muted);align-items:center}
+.kb-meta span{display:inline-flex;align-items:center;gap:4px}
+.kb-meta .late{color:var(--danger);font-weight:600}
+.kb-tag{background:var(--gray-soft);border-radius:6px;padding:1px 7px}
+.kb-star{color:var(--danger);font-weight:700}
+.kb-reason{margin-top:6px;font-size:12.5px;color:var(--pause)}
+.kb-add input{width:100%;border:1px dashed var(--muted);background:transparent;border-radius:8px;padding:8px 10px;font-size:14px}
+.kb-add input:focus{outline:none;border-style:solid;border-color:var(--pine);background:var(--surface)}
+.kb-more{font-size:12.5px;color:var(--muted);text-align:center;padding:4px}
+.kb-more button{color:var(--pine);font-weight:600;text-decoration:underline}
+.kb-empty{font-size:12.5px;color:var(--muted);text-align:center;padding:10px 4px}
 .cal-wk .cal-fill{grid-column:1/-1;min-height:6px}
 @media (max-width:760px){.cal-grid.cal-weeks{display:none}}
 .st-ok{background:var(--pine-soft);border-color:var(--pine)}
@@ -402,6 +431,7 @@ const I = {
   sun:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
   star:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3.5l2.6 5.3 5.8.8-4.2 4.1 1 5.8L12 16.8l-5.2 2.7 1-5.8-4.2-4.1 5.8-.8z"/></svg>',
   cal:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>',
+  board:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3.5" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="10" rx="1.5"/><rect x="16.5" y="4" width="4" height="13" rx="1.5"/></svg>',
   gantt:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h8M8 12h9M6 18h6"/><path d="M3 3v18" stroke-width="1.5"/></svg>',
   month:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4M8 14h2M14 14h2M8 17h2"/></svg>',
   chevl:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg>',
@@ -558,6 +588,7 @@ let calMonth = today().slice(0,8) + "01";
 const mondayOf = s => { const d = parse(s); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return ymd(d); };
 const GZ = {"2w":{days:14, w:64, label:"2 semanas", step:7, back:0}, "6w":{days:42, w:32, label:"6 semanas", step:14, back:7}, "3m":{days:91, w:15, label:"3 meses", step:28, back:14}};
 let ganttZoom = "6w", ganttDone = false;
+let boardList = "all", boardAllDone = false, kbDragId = null;
 let ganttStart = mondayOf(addDays(today(), -GZ["6w"].back));
 let leaveEdit = null;
 let leaveDraft = {type:"Vacaciones", from:"", to:"", note:""};
@@ -789,6 +820,7 @@ function renderSide(){
     + navBtn("planned", I.cal, "ico-cal", "Planificado", countOpen("planned"))
     + navBtn("calendar", I.month, "ico-month", "Calendario", 0)
     + navBtn("gantt", I.gantt, "ico-gantt", "Carta Gantt", 0)
+    + navBtn("board", I.board, "ico-board", "Tablero", 0)
     + navBtn("list:tasks", I.home, "ico-home", "Tareas", countOpen("list:tasks"))
     + navBtn("report", I.report, "ico-report", "Informe del día", 0)
     + navBtn("leave", I.leave, "ico-leave", "Vacaciones y permisos", 0)
@@ -850,6 +882,7 @@ function renderMain(){
   if (view === "report"){ renderReport(); return; }
   if (view === "calendar"){ renderCalendar(); return; }
   if (view === "gantt"){ renderGantt(); return; }
+  if (view === "board"){ renderBoard(); return; }
   if (view === "leave"){ renderLeave(); return; }
 
   let name = {myday:"Mi día",important:"Importante",planned:"Planificado",search:"Buscar"}[view] || listName(view.slice(5));
@@ -1130,6 +1163,68 @@ function renderGantt(){
     + '<span><i class="lg-ghost"></i>Repetición programada</span><span><i class="lg-hol"></i>Feriado</span><span><i class="lg-abs"></i>Vacaciones o permiso</span><span><i class="lg-we"></i>Fin de semana</span></div>';
   document.getElementById("body").innerHTML = legend + '<div class="gantt"><div class="g-grid" style="grid-template-columns:var(--glab) repeat('+N+','+z.w+'px);grid-template-rows:26px 36px'+(R ? ' repeat('+R+',34px)' : '')+'">'+h+'</div>'
     + (R ? '' : '<div class="g-empty">No hay tareas con fecha en este período. Usa las flechas para moverte o ponle fechas a tus tareas.</div>') + '</div>';
+}
+
+/* ---------- Tablero (Kanban por estado) ---------- */
+const KB_COLS = [
+  {id:"todo", label:"Por iniciar"}, {id:"doing", label:"En curso"}, {id:"paused", label:"En pausa"}, {id:"done", label:"Completada"}
+];
+const kbState = t => t.done ? "done" : t.paused ? "paused" : t.doing ? "doing" : "todo";
+function renderBoard(){
+  document.getElementById("title").value = "Tablero";
+  document.getElementById("subtitle").textContent = "Arrastra las tarjetas entre columnas para cambiar su estado";
+  const lists = [{id:"all", name:"Todas las listas"}, ...state.lists.map(l => ({id:l.id, name:l.name})), {id:"tasks", name:"Tareas"}];
+  if (!lists.some(l => l.id === boardList)) boardList = "all";
+  document.getElementById("headActions").innerHTML = '<select class="kb-filter" id="kbList" aria-label="Filtrar por lista">'
+    + lists.map(l => '<option value="'+esc(l.id)+'"'+(boardList===l.id?' selected':'')+'>'+esc(l.name)+'</option>').join("") + '</select>';
+  const tt = today(), limit = addDays(tt, -30);
+  const tasks = state.tasks.filter(t => boardList === "all" || t.listId === boardList);
+  const byDue = (a, b) => (a.due || "9999").localeCompare(b.due || "9999") || (b.important - a.important) || a.createdAt - b.createdAt;
+  const cols = {
+    todo: tasks.filter(t => kbState(t) === "todo").sort(byDue),
+    doing: tasks.filter(t => kbState(t) === "doing").sort(byDue),
+    paused: tasks.filter(t => kbState(t) === "paused").sort((a,b) => (a.pausedAt || "").localeCompare(b.pausedAt || "") || byDue(a,b)),
+    done: tasks.filter(t => kbState(t) === "done").sort(sortDone)
+  };
+  const doneTotal = cols.done.length;
+  if (!boardAllDone) cols.done = cols.done.filter(t => t.completedAt && ymd(new Date(t.completedAt)) >= limit);
+  const card = t => {
+    const st = kbState(t), late = st !== "done" && st !== "paused" && t.due && t.due < tt;
+    const meta = [];
+    if (t.important) meta.push('<span class="kb-star" title="Importante">★</span>');
+    if (boardList === "all") meta.push('<span class="kb-tag">'+esc(listName(t.listId))+'</span>');
+    if (st === "done" && t.completedAt) meta.push('<span>'+I.check.replace('width="12" height="12"','width="11" height="11"')+'Completada el '+esc(fmtShort(ymd(new Date(t.completedAt))))+'</span>');
+    else if (t.due) meta.push('<span class="'+(late ? 'late' : '')+'">'+I.cal.replace('width="20" height="20"','width="13" height="13"')+esc(hasSpan(t) ? dueLabel(t.start) + ' – ' + dueLabel(t.due) : dueLabel(t.due))+'</span>');
+    if (t.repeat && st !== "done") meta.push('<span title="'+esc(repeatText(t))+'">↻</span>');
+    if (t.steps.length){ const n = t.steps.filter(x => x.done).length; meta.push('<span>'+I.steps+n+'/'+t.steps.length+'</span>'); }
+    if (t.notes.trim()) meta.push('<span>'+I.note+'</span>');
+    return '<div class="kb-card'+(st==='done'?' done':'')+(late?' late':'')+(selected===t.id?' sel':'')+'" draggable="true" data-act="open" data-id="'+esc(t.id)+'" tabindex="0" role="button">'
+      + '<div class="kb-title">'+esc(t.title)+'</div>'
+      + (st === "paused" && (t.pauseReason || t.pausedAt) ? '<div class="kb-reason">'+esc(pauseText(t))+'</div>' : '')
+      + (meta.length ? '<div class="kb-meta">'+meta.join("")+'</div>' : '') + '</div>';
+  };
+  const placeholder = {todo:"+ Agregar tarea", doing:"+ Agregar tarea en curso", paused:"+ Agregar tarea en pausa"};
+  document.getElementById("body").innerHTML = '<div class="kb">' + KB_COLS.map(c => {
+    const items = cols[c.id];
+    const count = c.id === "done" && !boardAllDone ? items.length + (doneTotal > items.length ? ' de ' + doneTotal : '') : items.length;
+    return '<div class="kb-col '+c.id+'" data-col="'+c.id+'"><div class="kb-head"><span class="kb-pill '+c.id+'">'+c.label+'</span><span class="kb-count">'+count+'</span></div>'
+      + '<div class="kb-list">' + (items.length ? items.map(card).join("") : '<div class="kb-empty">Arrastra tareas aquí</div>') + '</div>'
+      + (c.id === "done"
+          ? (doneTotal > cols.done.length || boardAllDone ? '<div class="kb-more">'+(boardAllDone ? 'Mostrando todas · ' : 'Últimos 30 días · ')+'<button data-act="kbAllDone">'+(boardAllDone ? 'Ver solo últimos 30 días' : 'Ver todas')+'</button></div>' : '')
+          : '<div class="kb-add"><input data-kbadd="'+c.id+'" placeholder="'+placeholder[c.id]+'" aria-label="'+placeholder[c.id]+'" autocomplete="off"></div>')
+      + '</div>';
+  }).join("") + '</div>';
+}
+function setTaskState(t, st){
+  if (kbState(t) === st) return;
+  if (st === "done"){ toggleTask(t.id); toast("“" + t.title + "” completada."); return; }
+  if (t.done){ t.done = false; t.completedAt = 0; }
+  t.doing = st === "doing";
+  if (st === "doing" && t.myDay !== today()) t.myDay = today();
+  if (st === "paused"){ if (!t.paused) t.pausedAt = today(); t.paused = true; }
+  else { t.paused = false; t.pauseReason = ""; t.pausedAt = ""; }
+  commit();
+  toast("“" + t.title + "” → " + KB_COLS.find(c => c.id === st).label + (st === "paused" ? ". Puedes anotar el motivo en el detalle." : "."));
 }
 
 /* ---------- Vacaciones y permisos ---------- */
@@ -1457,6 +1552,48 @@ bodyEl.addEventListener("pointerup", () => endCalDrag(true));
 bodyEl.addEventListener("pointercancel", () => endCalDrag(false));
 document.addEventListener("keydown", e => { if (e.key === "Escape" && calDrag) endCalDrag(false); });
 bodyEl.addEventListener("click", e => { if (suppressClick){ suppressClick = false; e.stopPropagation(); e.preventDefault(); } }, true);
+
+/* Tablero: filtro, arrastrar tarjetas entre columnas y agregar rápido */
+document.getElementById("headActions").addEventListener("change", e => {
+  if (e.target.id === "kbList"){ boardList = e.target.value; renderMain(); }
+});
+bodyEl.addEventListener("dragstart", e => {
+  const c = e.target.closest && e.target.closest(".kb-card"); if (!c) return;
+  kbDragId = c.dataset.id; c.classList.add("dragging");
+  try { e.dataTransfer.setData("text/plain", kbDragId); e.dataTransfer.effectAllowed = "move"; } catch(err){}
+});
+bodyEl.addEventListener("dragover", e => {
+  const col = kbDragId && e.target.closest && e.target.closest(".kb-col"); if (!col) return;
+  e.preventDefault();
+  document.querySelectorAll(".kb-col.over").forEach(x => { if (x !== col) x.classList.remove("over"); });
+  col.classList.add("over");
+});
+bodyEl.addEventListener("drop", e => {
+  const col = kbDragId && e.target.closest && e.target.closest(".kb-col"); if (!col) return;
+  e.preventDefault();
+  const t = byId(kbDragId); kbDragId = null;
+  document.querySelectorAll(".kb-col.over").forEach(x => x.classList.remove("over"));
+  if (t) setTaskState(t, col.dataset.col);
+});
+bodyEl.addEventListener("dragend", () => {
+  kbDragId = null;
+  document.querySelectorAll(".kb-col.over").forEach(x => x.classList.remove("over"));
+  document.querySelectorAll(".kb-card.dragging").forEach(x => x.classList.remove("dragging"));
+});
+bodyEl.addEventListener("keydown", e => {
+  const inp = e.target.closest && e.target.closest("[data-kbadd]");
+  if (inp && e.key === "Enter"){
+    const title = inp.value.trim(); if (!title) return;
+    const st = inp.dataset.kbadd, col = st;
+    state.tasks.push({id:uid(), title, done:false, important:false, doing:st === "doing", myDay:st === "doing" ? today() : "", due:"", start:"",
+      paused:st === "paused", pauseReason:"", pausedAt:st === "paused" ? today() : "", repeat:"", repeatDays:[],
+      listId:boardList === "all" ? "tasks" : boardList, notes:"", steps:[], createdAt:Date.now(), completedAt:0});
+    commit();
+    const again = document.querySelector('[data-kbadd="'+col+'"]'); if (again) again.focus();
+  }
+  if (e.target.classList && e.target.classList.contains("kb-card") && (e.key === "Enter" || e.key === " ")){ e.preventDefault(); openTask(e.target.dataset.id); }
+});
+bodyEl.addEventListener("click", e => { if (e.target.closest && e.target.closest('[data-act="kbAllDone"]')){ boardAllDone = !boardAllDone; renderMain(); } });
 
 /* Detalle */
 const detailEl = document.getElementById("detail");
