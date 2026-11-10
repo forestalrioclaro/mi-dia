@@ -232,7 +232,7 @@ body.cal-resize,body.cal-resize *{cursor:ew-resize!important}
 .gantt{overflow:auto;max-height:calc(100vh - 215px);border:1px solid var(--line);border-radius:12px;background:var(--surface);--glab:240px}
 .g-grid{display:grid;width:max-content;min-width:100%}
 .g-corner{grid-column:1;grid-row:1 / span 2;position:sticky;left:0;top:0;z-index:7;background:var(--surface);border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:8px 12px;font-weight:700;font-size:12.5px;color:var(--muted);display:flex;align-items:flex-end}
-.g-mon{grid-row:1;position:sticky;top:0;z-index:5;background:var(--surface);font-size:12.5px;font-weight:700;padding:6px 6px 0;border-left:1px solid var(--line);white-space:nowrap;overflow:hidden;text-transform:capitalize}
+.g-mon{grid-row:1;position:sticky;top:0;z-index:5;background:var(--surface);font-size:12.5px;font-weight:700;padding:6px 6px 0;border-left:1px solid var(--line);white-space:nowrap;overflow:hidden}
 .g-day{grid-row:2;position:sticky;top:26px;z-index:5;background:var(--surface);font-size:11px;color:var(--muted);text-align:center;border-bottom:1px solid var(--line);line-height:1.25;padding-top:3px;overflow:hidden}
 .g-day b{display:inline-block;min-width:18px;font-weight:600;color:var(--ink)}
 .g-day.we b{color:var(--muted)}
@@ -1098,7 +1098,7 @@ function renderGantt(){
   for (let i = 0; i < N;){
     const k = addDays(gs, i), mo = k.slice(0,7); let n = 0;
     while (i + n < N && addDays(gs, i + n).slice(0,7) === mo) n++;
-    h += '<div class="g-mon" style="grid-column:'+(i+2)+' / span '+n+'">'+(n * z.w >= 60 ? esc(parse(k).toLocaleDateString("es-CL",{month:"long", year:"numeric"})) : '')+'</div>';
+    h += '<div class="g-mon" style="grid-column:'+(i+2)+' / span '+n+'">'+(n * z.w >= 60 ? esc((m => m.charAt(0).toUpperCase() + m.slice(1))(parse(k).toLocaleDateString("es-CL",{month:"long", year:"numeric"}))) : '')+'</div>';
     i += n;
   }
   // Días y columnas de fondo
