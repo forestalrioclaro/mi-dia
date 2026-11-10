@@ -196,6 +196,19 @@ svg{display:block;flex:none}
 .cal-task{display:block;width:100%;text-align:left;font-size:12.5px;line-height:1.3;padding:3px 6px;border-radius:5px;border-left:3px solid;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink)}
 .cal-task:hover{filter:brightness(.96)}
 .cal-task.sel{outline:2px solid var(--ink);outline-offset:1px}
+/* Arrastrar y cambiar duración en el calendario */
+.cal-task{position:relative}
+.cal-grid .cal-task:not(.ghost){cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
+.rs{position:absolute;top:0;bottom:0;width:8px;cursor:ew-resize;z-index:1;border-radius:3px}
+.rs-l{left:-3px}
+.rs-r{right:0}
+.cal-task:hover .rs{background:rgba(127,127,127,.35)}
+.cal-task.dragging{opacity:.45}
+.cal-cell.drop{outline:2px dashed var(--pine);outline-offset:-3px}
+body.cal-move,body.cal-move *{cursor:grabbing!important}
+body.cal-resize,body.cal-resize *{cursor:ew-resize!important}
+.cal-hint{margin-left:auto;font-style:italic}
+@media (max-width:760px){.cal-hint{display:none}}
 .st-ok{background:var(--pine-soft);border-color:var(--pine)}
 .st-doing{background:var(--doing-soft);border-color:var(--doing)}
 .st-late{background:var(--danger-soft);border-color:var(--danger)}
@@ -893,7 +906,9 @@ function renderCalendar(){
   const tt = today();
   const counted = {ok:new Set(), doing:new Set(), late:new Set(), wait:new Set()};
   const chip = e => { const t = e.t, s = calStatus(t), part = e.n > 1 ? ' (día '+e.i+' de '+e.n+')' : '';
-    return '<button class="cal-task st-'+s+(selected===t.id?' sel':'')+'" data-act="open" data-id="'+esc(t.id)+'" title="'+esc(t.title+' — '+ST_LABEL[s]+part)+'">'+(t.repeat&&!t.done?'↻ ':'')+esc(t.title)+(e.n > 1 ? ' <small>'+e.i+'/'+e.n+'</small>' : '')+'</button>'; };
+    const handles = (e.i === 1 ? '<span class="rs rs-l" data-rs="start" title="Arrastra para cambiar el inicio"></span>' : '')
+      + (e.i === e.n ? '<span class="rs rs-r" data-rs="end" title="Arrastra para cambiar el vencimiento"></span>' : '');
+    return '<button class="cal-task st-'+s+(selected===t.id?' sel':'')+'" data-act="open" data-id="'+esc(t.id)+'" title="'+esc(t.title+' — '+ST_LABEL[s]+part)+'">'+handles+(t.repeat&&!t.done?'↻ ':'')+esc(t.title)+(e.n > 1 ? ' <small>'+e.i+'/'+e.n+'</small>' : '')+'</button>'; };
   const ghostChip = t => '<button class="cal-task ghost" data-act="open" data-id="'+esc(t.id)+'" title="'+esc(t.title+' — Repetición programada ('+repeatText(t)+')')+'">↻ '+esc(t.title)+'</button>';
   const endKey = ymd(end), ghosts = {};
   state.tasks.filter(t => !t.done && t.repeat && t.due).forEach(t => {
@@ -916,12 +931,12 @@ function renderCalendar(){
     const abs = absenceOn(k);
     const holHtml = (hol ? '<div class="cal-hol">'+esc(hol)+'</div>' : '') + (abs ? '<div class="cal-abs">'+esc(abs.type)+'</div>' : '');
     const html = items.map(chip).join("") + gh.map(ghostChip).join("");
-    grid += '<div class="cal-cell'+dayCls+(abs&&!hol?' absent':'')+(out?' out':'')+(k===tt?' is-today':'')+'"'+(hol?' title="Feriado: '+esc(hol)+'"':'')+'><div class="cal-num">'+d.getDate()+'</div>'+holHtml+html+'</div>';
+    grid += '<div class="cal-cell'+dayCls+(abs&&!hol?' absent':'')+(out?' out':'')+(k===tt?' is-today':'')+'" data-date="'+k+'"'+(hol?' title="Feriado: '+esc(hol)+'"':'')+'><div class="cal-num">'+d.getDate()+'</div>'+holHtml+html+'</div>';
     if (!out && (items.length || gh.length || hol || abs)) agenda += '<div class="ag-day'+(hol?' holiday':abs?' absent':'')+(k===tt?' is-today':'')+'"><div class="ag-h">'+esc(fmtLong(k))+(hol?' · Feriado':'')+'</div>'+holHtml+html+'</div>';
   }
   const lg = s => '<span><i class="lg-'+s+'"></i>'+ST_LABEL[s]+' <b>'+counted[s].size+'</b></span>';
   document.getElementById("body").innerHTML =
-    '<div class="legend">'+lg("ok")+lg("doing")+lg("late")+lg("wait")+'<span><i class="lg-ghost"></i>Repetición programada</span><span><i class="lg-hol"></i>Feriado</span><span><i class="lg-abs"></i>Vacaciones o permiso</span><span><i class="lg-we"></i>Fin de semana</span></div>'
+    '<div class="legend">'+lg("ok")+lg("doing")+lg("late")+lg("wait")+'<span><i class="lg-ghost"></i>Repetición programada</span><span><i class="lg-hol"></i>Feriado</span><span><i class="lg-abs"></i>Vacaciones o permiso</span><span><i class="lg-we"></i>Fin de semana</span><span class="cal-hint">Arrastra una tarea para moverla; estira sus bordes para cambiar los días</span></div>'
     + '<div class="cal-week"><span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span></div>'
     + '<div class="cal-grid">'+grid+'</div>'
     + '<div class="agenda">'+(agenda || '<p class="none">No hay tareas este mes.</p>')+'</div>';
@@ -1181,6 +1196,69 @@ bodyEl.addEventListener("change", e => {
   readLeaveForm(e);
   if (e.target.id === "repDate"){ reportDate = e.target.value || today(); renderReport(); }
 });
+
+/* Calendario: arrastrar para mover y estirar los bordes para cambiar la duración */
+const daysBetween = (a, b) => Math.round((parse(b) - parse(a)) / 86400000);
+let calDrag = null, suppressClick = false;
+function calNewDates(t, mode, from, to){
+  let ns = t.start || "", nd = t.due || from;
+  if (mode === "move"){
+    const delta = daysBetween(from, to);
+    nd = addDays(nd, delta); ns = ns ? addDays(ns, delta) : "";
+  } else if (mode === "end"){
+    if (!ns && to > nd) ns = nd;
+    nd = to < (ns || to) ? ns : to;
+  } else if (mode === "start"){
+    ns = to > nd ? nd : to;
+  }
+  if (ns && ns >= nd) ns = "";
+  return {ns, nd};
+}
+function calPreview(range){
+  document.querySelectorAll(".cal-cell.drop").forEach(c => c.classList.remove("drop"));
+  if (!range) return;
+  document.querySelectorAll(".cal-grid .cal-cell[data-date]").forEach(c => {
+    const k = c.dataset.date; if (k >= (range.ns || range.nd) && k <= range.nd) c.classList.add("drop");
+  });
+}
+function cellAt(x, y){ const el = document.elementFromPoint(x, y); return el && el.closest(".cal-grid .cal-cell[data-date]"); }
+bodyEl.addEventListener("pointerdown", e => {
+  if (view !== "calendar" || e.button !== 0) return;
+  const chip = e.target.closest(".cal-grid .cal-task:not(.ghost)"); if (!chip) return;
+  const t = byId(chip.dataset.id), cell = chip.closest(".cal-cell[data-date]"); if (!t || !cell) return;
+  const rs = e.target.closest("[data-rs]");
+  calDrag = {t, chip, mode: rs ? rs.dataset.rs : "move", from: cell.dataset.date, x: e.clientX, y: e.clientY, active: !!rs, to: cell.dataset.date};
+  if (rs){ document.body.classList.add("cal-resize"); calPreview(calNewDates(t, calDrag.mode, calDrag.from, calDrag.to)); e.preventDefault(); }
+  try { chip.setPointerCapture(e.pointerId); } catch(err){}
+});
+bodyEl.addEventListener("pointermove", e => {
+  if (!calDrag) return;
+  if (!calDrag.active){
+    if (Math.abs(e.clientX - calDrag.x) + Math.abs(e.clientY - calDrag.y) < 6) return;
+    calDrag.active = true; calDrag.chip.classList.add("dragging"); document.body.classList.add("cal-move");
+  }
+  const cell = cellAt(e.clientX, e.clientY); if (!cell) return;
+  calDrag.to = cell.dataset.date;
+  calPreview(calNewDates(calDrag.t, calDrag.mode, calDrag.from, calDrag.to));
+});
+function endCalDrag(apply){
+  const d = calDrag; calDrag = null;
+  document.body.classList.remove("cal-move", "cal-resize"); calPreview(null);
+  if (!d) return;
+  d.chip.classList.remove("dragging");
+  if (!d.active) return;
+  suppressClick = true; setTimeout(() => { suppressClick = false; }, 300);
+  if (!apply) return;
+  const {ns, nd} = calNewDates(d.t, d.mode, d.from, d.to);
+  if (ns === (d.t.start || "") && nd === (d.t.due || "")) return;
+  d.t.start = ns; d.t.due = nd; commit();
+  const msg = ns ? "Del " + fmtShort(ns) + " al " + fmtShort(nd) : "Vence el " + fmtShort(nd);
+  toast(!isWorkday(nd) ? msg + ". Ojo: ese día no se trabaja (" + nonWorkingText(nd) + ")." : msg + ".");
+}
+bodyEl.addEventListener("pointerup", () => endCalDrag(true));
+bodyEl.addEventListener("pointercancel", () => endCalDrag(false));
+document.addEventListener("keydown", e => { if (e.key === "Escape" && calDrag) endCalDrag(false); });
+bodyEl.addEventListener("click", e => { if (suppressClick){ suppressClick = false; e.stopPropagation(); e.preventDefault(); } }, true);
 
 /* Detalle */
 const detailEl = document.getElementById("detail");
