@@ -263,6 +263,10 @@ body.cal-resize,body.cal-resize *{cursor:ew-resize!important}
 .gantt .cal-task.cont-l{border-left-width:0;border-top-left-radius:0;border-bottom-left-radius:0;margin-left:0}
 .gantt .cal-task.cont-r{border-top-right-radius:0;border-bottom-right-radius:0;margin-right:0}
 .g-empty{padding:30px;text-align:center;color:var(--muted)}
+.g-zoom{display:inline-flex;align-items:center;gap:2px;margin:0 6px;padding:0 4px;border-left:1px solid var(--line);border-right:1px solid var(--line)}
+.g-zoom .chip-btn{font-size:18px;font-weight:700;line-height:1;padding:5px 11px}
+.g-zoom .chip-btn:disabled{opacity:.35;cursor:default}
+.g-zval{font-size:12.5px;color:var(--muted);min-width:40px;text-align:center;font-variant-numeric:tabular-nums}
 @media (max-width:760px){.gantt{--glab:150px;max-height:none}}
 /* Tablero */
 .kb-filter{border:1px solid var(--line);border-radius:9px;padding:6px 8px;background:var(--surface);font-size:14px}
@@ -605,6 +609,9 @@ let calMonth = today().slice(0,8) + "01";
 const mondayOf = s => { const d = parse(s); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return ymd(d); };
 const GZ = {"2w":{days:14, w:64, label:"2 semanas", step:7, back:0}, "6w":{days:42, w:32, label:"6 semanas", step:14, back:7}, "3m":{days:91, w:15, label:"3 meses", step:28, back:14}};
 let ganttZoom = "6w", ganttDone = false;
+// Zoom de la Gantt (botones − y +): multiplica el ancho de los días y de la columna de nombres
+const G_SCALES = [0.6, 0.8, 1, 1.3, 1.7, 2.2, 3, 4];
+let ganttScale = (() => { const v = +localStorage.getItem("mis-tareas-gantt-zoom"); return G_SCALES.includes(v) ? v : 1; })();
 let boardList = "all", boardAllDone = false, kbDragId = null;
 let ganttStart = mondayOf(addDays(today(), -GZ["6w"].back));
 let leaveEdit = null;
@@ -1111,6 +1118,8 @@ function renderCalendar(){
 /* ---------- Carta Gantt ---------- */
 function renderGantt(){
   const z = GZ[ganttZoom], N = z.days, gs = ganttStart, ge = addDays(gs, N - 1), tt = today();
+  const W = Math.round(z.w * ganttScale);
+  const labW = window.matchMedia("(max-width:760px)").matches ? Math.round(150 * Math.min(ganttScale, 1.5)) : Math.round(Math.min(480, 240 * Math.max(1, Math.min(ganttScale, 2))));
   const dB = (a, b) => Math.round((parse(b) - parse(a)) / 86400000);
   document.getElementById("title").value = "Carta Gantt";
   document.getElementById("subtitle").textContent = fmtShort(gs) + " al " + fmtShort(ge) + " · arrastra las barras para mover tareas y estira sus bordes para cambiar los días";
@@ -1118,6 +1127,9 @@ function renderGantt(){
     + '<button class="chip-btn" data-act="gPrev" aria-label="Anterior">'+I.chevl+'</button>'
     + '<button class="chip-btn" data-act="gToday">Hoy</button>'
     + '<button class="chip-btn" data-act="gNext" aria-label="Siguiente">'+I.chev+'</button>'
+    + '<span class="g-zoom"><button class="chip-btn" data-act="gOut" title="Alejar"'+(ganttScale === G_SCALES[0] ? ' disabled' : '')+' aria-label="Alejar">−</button>'
+    + '<span class="g-zval">'+Math.round(ganttScale * 100)+'%</span>'
+    + '<button class="chip-btn" data-act="gIn" title="Acercar para leer mejor los títulos"'+(ganttScale === G_SCALES[G_SCALES.length-1] ? ' disabled' : '')+' aria-label="Acercar">+</button></span>'
     + Object.keys(GZ).map(k => '<button class="chip-btn'+(ganttZoom===k?' on':'')+'" data-act="gZoom" data-z="'+k+'">'+GZ[k].label+'</button>').join("")
     + '<button class="chip-btn'+(ganttDone?' on':'')+'" data-act="gDone">Completadas</button></div>';
   // Filas: tareas con fecha que tocan el período (o alguna de sus repeticiones), agrupadas por lista
@@ -1152,16 +1164,16 @@ function renderGantt(){
   for (let i = 0; i < N;){
     const k = addDays(gs, i), mo = k.slice(0,7); let n = 0;
     while (i + n < N && addDays(gs, i + n).slice(0,7) === mo) n++;
-    h += '<div class="g-mon" style="grid-column:'+(i+2)+' / span '+n+'">'+(n * z.w >= 60 ? esc((m => m.charAt(0).toUpperCase() + m.slice(1))(parse(k).toLocaleDateString("es-CL",{month:"long", year:"numeric"}))) : '')+'</div>';
+    h += '<div class="g-mon" style="grid-column:'+(i+2)+' / span '+n+'">'+(n * W >= 60 ? esc((m => m.charAt(0).toUpperCase() + m.slice(1))(parse(k).toLocaleDateString("es-CL",{month:"long", year:"numeric"}))) : '')+'</div>';
     i += n;
   }
   // Días y columnas de fondo
   for (let i = 0; i < N; i++){
     const k = addDays(gs, i), dd = parse(k), hol = holidayName(k), abs = absenceOn(k), we = isWeekend(k);
     const cls = (we ? ' we' : '') + (hol ? ' hol' : '') + (abs && !hol ? ' abs' : '') + (k === tt ? ' today' : '');
-    const showNum = z.w >= 20 || dd.getDay() === 1 || k === tt;
+    const showNum = W >= 20 || dd.getDay() === 1 || k === tt;
     const tip = fmtLong(k) + (hol ? ' · Feriado: ' + hol : abs ? ' · ' + abs.type : '');
-    h += '<div class="g-day'+cls+'" style="grid-column:'+(i+2)+'" title="'+esc(tip)+'">'+(z.w >= 30 ? DAY_LETTER[dd.getDay()] + '<br>' : '')+(showNum ? '<b>'+dd.getDate()+'</b>' : '')+'</div>';
+    h += '<div class="g-day'+cls+'" style="grid-column:'+(i+2)+'" title="'+esc(tip)+'">'+(W >= 30 ? DAY_LETTER[dd.getDay()] + '<br>' : '')+(showNum ? '<b>'+dd.getDate()+'</b>' : '')+'</div>';
     if (R) h += '<div class="g-col'+cls+'" data-date="'+k+'" style="grid-column:'+(i+2)+';grid-row:3 / span '+R+'"></div>';
   }
   // Filas de tareas y barras
@@ -1182,7 +1194,7 @@ function renderGantt(){
   });
   const legend = '<div class="legend">'+["ok","doing","late","wait","paused"].map(s => '<span><i class="lg-'+s+'"></i>'+ST_LABEL[s]+'</span>').join("")
     + '<span><i class="lg-ghost"></i>Repetición programada</span><span><i class="lg-hol"></i>Feriado</span><span><i class="lg-abs"></i>Vacaciones o permiso</span><span><i class="lg-we"></i>Fin de semana</span></div>';
-  document.getElementById("body").innerHTML = legend + '<div class="gantt"><div class="g-grid" style="grid-template-columns:var(--glab) repeat('+N+','+z.w+'px);grid-template-rows:26px 36px'+(R ? ' repeat('+R+',34px)' : '')+'">'+h+'</div>'
+  document.getElementById("body").innerHTML = legend + '<div class="gantt" style="--glab:'+labW+'px"><div class="g-grid" style="grid-template-columns:var(--glab) repeat('+N+','+W+'px);grid-template-rows:26px 36px'+(R ? ' repeat('+R+',34px)' : '')+'">'+h+'</div>'
     + (R ? '' : '<div class="g-empty">No hay tareas con fecha en este período. Usa las flechas para moverte o ponle fechas a tus tareas.</div>') + '</div>';
 }
 
@@ -1482,6 +1494,16 @@ document.getElementById("headActions").addEventListener("click", async e => {
   if (b.dataset.act === "gToday"){ ganttStart = mondayOf(addDays(today(), -GZ[ganttZoom].back)); renderMain(); }
   if (b.dataset.act === "gZoom"){ ganttZoom = b.dataset.z; ganttStart = mondayOf(addDays(today(), -GZ[ganttZoom].back)); renderMain(); }
   if (b.dataset.act === "gDone"){ ganttDone = !ganttDone; renderMain(); }
+  if (b.dataset.act === "gIn" || b.dataset.act === "gOut"){
+    const i = G_SCALES.indexOf(ganttScale) + (b.dataset.act === "gIn" ? 1 : -1);
+    if (i >= 0 && i < G_SCALES.length){
+      ganttScale = G_SCALES[i];
+      try { localStorage.setItem("mis-tareas-gantt-zoom", String(ganttScale)); } catch(err){}
+      const sc = document.querySelector(".gantt"), keep = sc ? (sc.scrollLeft + sc.clientWidth / 2) / sc.scrollWidth : 0;
+      renderMain();
+      const nsc = document.querySelector(".gantt"); if (nsc) nsc.scrollLeft = keep * nsc.scrollWidth - nsc.clientWidth / 2;
+    }
+  }
   if (b.dataset.act === "delList"){
     const id = view.slice(5); const l = state.lists.find(x => x.id === id); if (!l) return;
     const n = state.tasks.filter(t => t.listId === id).length;
