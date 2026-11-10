@@ -218,6 +218,18 @@ svg{display:block;flex:none}
 .cal-task.ghost{background:transparent;border:1px dashed var(--line);border-left:3px solid var(--muted);color:var(--muted)}
 .lg-ghost{background:transparent!important;border:1px dashed var(--muted)}
 
+/* Feriados y fines de semana */
+.cal-cell.weekend{background:var(--gray-soft)}
+.cal-cell.holiday{background:var(--danger-soft);border-color:var(--danger)}
+.cal-cell.holiday .cal-num{color:var(--danger)}
+.cal-cell.holiday.is-today .cal-num{color:var(--pine-ink)}
+.cal-hol{font-size:11.5px;line-height:1.25;color:var(--danger);font-weight:600;margin-bottom:2px}
+.ag-day.holiday{border:1px solid var(--danger);background:var(--danger-soft)}
+.ag-day.holiday .ag-h{color:var(--danger)}
+.lg-hol{background:var(--danger-soft)!important;border:1px solid var(--danger)}
+.lg-we{background:var(--gray-soft)!important;border:1px solid var(--line)}
+.due-warn{margin:0;padding:0 14px 12px;color:var(--danger);font-size:13px}
+
 /* Ingreso */
 .app[hidden],.login[hidden]{display:none}
 .login{position:fixed;inset:0;display:grid;place-items:center;padding:20px;background:var(--bg)}
@@ -342,16 +354,44 @@ function dueLabel(s){
   if (s === addDays(t,-1)) return "Ayer";
   return fmtShort(s);
 }
+/* Feriados nacionales de Chile (fuente: feriados.cl). En la forestal se trabaja de lunes a viernes. */
+const HOLIDAYS = {
+  "2026-01-01":"Año Nuevo","2026-04-03":"Viernes Santo","2026-04-04":"Sábado Santo","2026-05-01":"Día Nacional del Trabajo",
+  "2026-05-21":"Día de las Glorias Navales","2026-06-21":"Día Nacional de los Pueblos Indígenas","2026-06-29":"San Pedro y San Pablo",
+  "2026-07-16":"Día de la Virgen del Carmen","2026-08-15":"Asunción de la Virgen","2026-09-18":"Independencia Nacional",
+  "2026-09-19":"Día de las Glorias del Ejército","2026-10-12":"Encuentro de Dos Mundos","2026-10-31":"Día de las Iglesias Evangélicas y Protestantes",
+  "2026-11-01":"Día de Todos los Santos","2026-12-08":"Inmaculada Concepción","2026-12-25":"Navidad",
+  "2027-01-01":"Año Nuevo","2027-03-26":"Viernes Santo","2027-03-27":"Sábado Santo","2027-05-01":"Día Nacional del Trabajo",
+  "2027-05-21":"Día de las Glorias Navales","2027-06-21":"Día Nacional de los Pueblos Indígenas","2027-06-28":"San Pedro y San Pablo",
+  "2027-07-16":"Día de la Virgen del Carmen","2027-08-15":"Asunción de la Virgen","2027-09-17":"Feriado Adicional Fiestas Patrias",
+  "2027-09-18":"Independencia Nacional","2027-09-19":"Día de las Glorias del Ejército","2027-10-11":"Encuentro de Dos Mundos",
+  "2027-10-31":"Día de las Iglesias Evangélicas y Protestantes","2027-11-01":"Día de Todos los Santos","2027-12-08":"Inmaculada Concepción",
+  "2027-12-25":"Navidad",
+  "2028-01-01":"Año Nuevo","2028-04-14":"Viernes Santo","2028-04-15":"Sábado Santo","2028-05-01":"Día Nacional del Trabajo",
+  "2028-05-21":"Día de las Glorias Navales","2028-06-20":"Día Nacional de los Pueblos Indígenas","2028-06-26":"San Pedro y San Pablo",
+  "2028-07-09":"Elecciones Primarias","2028-07-16":"Día de la Virgen del Carmen","2028-08-15":"Asunción de la Virgen",
+  "2028-09-18":"Independencia Nacional","2028-09-19":"Día de las Glorias del Ejército","2028-10-09":"Encuentro de Dos Mundos",
+  "2028-10-27":"Día de las Iglesias Evangélicas y Protestantes","2028-10-29":"Elecciones Gobernadores, Consejeros, Alcaldes y Concejales",
+  "2028-11-01":"Día de Todos los Santos","2028-12-08":"Inmaculada Concepción","2028-12-25":"Navidad",
+  "2028-12-26":"Segunda Vuelta Elecciones Gobernadores (por confirmar)"
+};
+const holidayName = s => HOLIDAYS[s] || "";
+const isWeekend = s => { const g = parse(s).getDay(); return g === 0 || g === 6; };
+const isWorkday = s => !isWeekend(s) && !HOLIDAYS[s];
+function nextWorkday(s){ let d = s; for (let i = 0; i < 30 && !isWorkday(d); i++) d = addDays(d,1); return d; }
+function nonWorkingText(s){ return HOLIDAYS[s] ? "Feriado: " + HOLIDAYS[s] : isWeekend(s) ? "Fin de semana" : ""; }
 function nextMonday(){ const d = new Date(); const k = (8 - d.getDay()) % 7 || 7; d.setDate(d.getDate()+k); return ymd(d); }
 const DAY_SHORT = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
 const DAY_LETTER = ["D","L","M","X","J","V","S"];
 const DAY_ORDER = [1,2,3,4,5,6,0];
 function firstOnOrAfter(s, days){
   const d = parse(s);
-  for (let i = 0; i < 7; i++){ if (days.includes(d.getDay())) return ymd(d); d.setDate(d.getDate()+1); }
-  return s;
+  for (let i = 0; i < 7; i++){ if (days.includes(d.getDay())) return nextWorkday(ymd(d)); d.setDate(d.getDate()+1); }
+  return nextWorkday(s);
 }
-function nextRepeat(s, rep, days){
+// Siguiente repetición: si cae en fin de semana o feriado, pasa al siguiente día hábil
+function nextRepeat(s, rep, days){ return nextWorkday(nextRepeatRaw(s, rep, days)); }
+function nextRepeatRaw(s, rep, days){
   const d = parse(s);
   if (rep === "days"){
     if (!days || !days.length){ d.setDate(d.getDate()+7); return ymd(d); }
@@ -685,7 +725,8 @@ function renderMain(){
   if (view === "search") name = "Buscar: " + query;
   if (document.activeElement !== title) title.value = name;
   if (view === "myday"){
-    sub.textContent = fmtLong(today());
+    const nw = nonWorkingText(today());
+    sub.textContent = fmtLong(today()) + (nw ? " · " + nw : "");
     const n = suggestions().length;
     acts.innerHTML = '<button class="chip-btn" data-act="sugg">'+I.bulb+'Sugerencias'+(n?' ('+n+')':'')+'</button>';
   }
@@ -751,6 +792,7 @@ function renderDetail(){
     + '<div class="card">'
       + '<div class="field"><label for="dDue">Vence</label><input type="date" id="dDue" value="'+esc(t.due)+'"></div>'
       + '<div class="quick"><button data-act="due" data-v="0">Hoy</button><button data-act="due" data-v="1">Mañana</button><button data-act="due" data-v="mon">Próximo lunes</button>'+(t.due?'<button data-act="due" data-v="">Quitar fecha</button>':'')+'</div>'
+      + (t.due && !isWorkday(t.due) ? '<p class="due-warn">Ojo: ese día no se trabaja ('+esc(nonWorkingText(t.due))+').</p>' : '')
       + '<div class="field"><label for="dRep">Repetir</label><select id="dRep">'+repOpts+'</select></div>'
       + (t.repeat === "days" ? '<div class="days" role="group" aria-label="Días de repetición">'+DAY_ORDER.map(d => '<button data-act="day" data-d="'+d+'" class="'+(t.repeatDays.includes(d)?'on':'')+'" aria-pressed="'+t.repeatDays.includes(d)+'" title="'+DAY_SHORT[d]+'">'+DAY_LETTER[d]+'</button>').join("")+'</div>' : '')
       + '<div class="field"><label for="dList">Lista</label><select id="dList">'+listOpts+'</select></div>'
@@ -803,13 +845,16 @@ function renderCalendar(){
     const k = ymd(d), items = byDay[k] || [], out = d.getMonth() !== m.getMonth();
     if (!out) items.forEach(t => counts[calStatus(t)]++);
     const gh = ghosts[k] || [];
+    const hol = holidayName(k);
+    const dayCls = hol ? ' holiday' : isWeekend(k) ? ' weekend' : '';
+    const holHtml = hol ? '<div class="cal-hol">'+esc(hol)+'</div>' : '';
     const html = items.map(chip).join("") + gh.map(ghostChip).join("");
-    grid += '<div class="cal-cell'+(out?' out':'')+(k===tt?' is-today':'')+'"><div class="cal-num">'+d.getDate()+'</div>'+html+'</div>';
-    if (!out && (items.length || gh.length)) agenda += '<div class="ag-day'+(k===tt?' is-today':'')+'"><div class="ag-h">'+esc(fmtLong(k))+'</div>'+html+'</div>';
+    grid += '<div class="cal-cell'+dayCls+(out?' out':'')+(k===tt?' is-today':'')+'"'+(hol?' title="Feriado: '+esc(hol)+'"':'')+'><div class="cal-num">'+d.getDate()+'</div>'+holHtml+html+'</div>';
+    if (!out && (items.length || gh.length || hol)) agenda += '<div class="ag-day'+(hol?' holiday':'')+(k===tt?' is-today':'')+'"><div class="ag-h">'+esc(fmtLong(k))+(hol?' · Feriado':'')+'</div>'+holHtml+html+'</div>';
   }
   const lg = s => '<span><i class="lg-'+s+'"></i>'+ST_LABEL[s]+' <b>'+counts[s]+'</b></span>';
   document.getElementById("body").innerHTML =
-    '<div class="legend">'+lg("ok")+lg("doing")+lg("late")+lg("wait")+'<span><i class="lg-ghost"></i>Repetición programada</span></div>'
+    '<div class="legend">'+lg("ok")+lg("doing")+lg("late")+lg("wait")+'<span><i class="lg-ghost"></i>Repetición programada</span><span><i class="lg-hol"></i>Feriado</span><span><i class="lg-we"></i>Fin de semana</span></div>'
     + '<div class="cal-week"><span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span></div>'
     + '<div class="cal-grid">'+grid+'</div>'
     + '<div class="agenda">'+(agenda || '<p class="none">No hay tareas este mes.</p>')+'</div>';
@@ -1013,7 +1058,7 @@ detailEl.addEventListener("change", e => {
   if (e.target.id === "dRep"){
     t.repeat = e.target.value;
     if (t.repeat === "days" && !t.repeatDays.length) t.repeatDays = [parse(t.due || today()).getDay()];
-    if (t.repeat && !t.due) t.due = t.repeat === "days" ? firstOnOrAfter(today(), t.repeatDays) : today();
+    if (t.repeat && !t.due) t.due = t.repeat === "days" ? firstOnOrAfter(today(), t.repeatDays) : nextWorkday(today());
     commit();
   }
   if (e.target.id === "dList"){ t.listId = e.target.value; commit(); }
