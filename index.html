@@ -209,6 +209,19 @@ body.cal-move,body.cal-move *{cursor:grabbing!important}
 body.cal-resize,body.cal-resize *{cursor:ew-resize!important}
 .cal-hint{margin-left:auto;font-style:italic}
 @media (max-width:760px){.cal-hint{display:none}}
+/* Semanas con barras continuas */
+.cal-grid.cal-weeks{display:flex;flex-direction:column;gap:4px}
+.cal-wk{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));column-gap:4px;row-gap:3px;min-height:108px}
+.cal-wk > .cal-cell{min-height:0;padding:0}
+.cal-dh{padding:6px 6px 0;position:relative;z-index:1;pointer-events:none;min-width:0}
+.cal-dh.out{opacity:.45}
+.cal-dh.holiday .cal-num{color:var(--danger)}
+.cal-dh.holiday.is-today .cal-num{color:var(--pine-ink)}
+.cal-wk .cal-task{z-index:2;align-self:start;margin:0 6px;width:auto;min-width:0}
+.cal-wk .cal-task.cont-l{border-left-width:0;border-top-left-radius:0;border-bottom-left-radius:0;margin-left:0}
+.cal-wk .cal-task.cont-r{border-top-right-radius:0;border-bottom-right-radius:0;margin-right:0}
+.cal-wk .cal-fill{grid-column:1/-1;min-height:6px}
+@media (max-width:760px){.cal-grid.cal-weeks{display:none}}
 .st-ok{background:var(--pine-soft);border-color:var(--pine)}
 .st-doing{background:var(--doing-soft);border-color:var(--doing)}
 .st-late{background:var(--danger-soft);border-color:var(--danger)}
@@ -921,7 +934,53 @@ function renderCalendar(){
       (len > 1 ? spanDays(s, d) : [d]).forEach(x => { if (!(ghosts[x] || []).includes(t)) (ghosts[x] = ghosts[x] || []).push(t); });
     }
   });
-  let grid = "", agenda = "";
+  // Calendario por semanas: cada tarea es una sola barra que cruza los días que abarca
+  const dBetween = (a, b) => Math.round((parse(b) - parse(a)) / 86400000);
+  const occ = [];
+  state.tasks.forEach(t => { const s0 = hasSpan(t) ? t.start : calDate(t); occ.push({t, s:s0, e:hasSpan(t) ? t.due : s0, ghost:false}); });
+  state.tasks.filter(t => !t.done && t.repeat && t.due).forEach(t => {
+    const len = hasSpan(t) ? spanDays(t.start, t.due).length : 1;
+    let d = t.due;
+    for (let i = 0; i < 400; i++){
+      d = nextRepeat(d, t.repeat, t.repeatDays);
+      const s = len > 1 ? prevWorkdays(d, len - 1) : d;
+      if (s > endKey) break;
+      occ.push({t, s, e:d, ghost:true});
+    }
+  });
+  const bar = sg => {
+    const o = sg.o, t = o.t, s = o.ghost ? "" : calStatus(t);
+    const range = o.s === o.e ? fmtShort(o.e) : fmtShort(o.s) + " al " + fmtShort(o.e);
+    const tip = o.ghost ? t.title + " — Repetición programada (" + range + ")" : t.title + " — " + ST_LABEL[s] + " (" + range + ")";
+    const handles = o.ghost ? "" : (!sg.contL ? '<span class="rs rs-l" data-rs="start" title="Arrastra para cambiar el inicio"></span>' : '')
+      + (!sg.contR ? '<span class="rs rs-r" data-rs="end" title="Arrastra para cambiar el vencimiento"></span>' : '');
+    return '<button class="cal-task '+(o.ghost ? 'ghost' : 'st-'+s)+(selected===t.id&&!o.ghost?' sel':'')+(sg.contL?' cont-l':'')+(sg.contR?' cont-r':'')+'" data-act="open" data-id="'+esc(t.id)+'"'
+      + ' style="grid-column:'+(sg.c1+1)+' / '+(sg.c2+2)+';grid-row:'+(sg.lane+2)+'" title="'+esc(tip)+'">'+handles+((t.repeat&&!t.done)||o.ghost?'↻ ':'')+esc(t.title)+'</button>';
+  };
+  let weeks = "";
+  for (let w = new Date(start); w <= end; w.setDate(w.getDate()+7)){
+    const ws = ymd(w), we = addDays(ws, 6);
+    const segs = occ.filter(o => o.s <= we && o.e >= ws).map(o => {
+      const a = o.s < ws ? ws : o.s, b = o.e > we ? we : o.e;
+      return {o, c1:dBetween(ws, a), c2:dBetween(ws, b), contL:o.s < ws, contR:o.e > we};
+    });
+    segs.sort((x,y) => x.c1 - y.c1 || (y.c2 - y.c1) - (x.c2 - x.c1) || (x.o.ghost - y.o.ghost)
+      || (x.o.ghost ? 0 : order[calStatus(x.o.t)] - order[calStatus(y.o.t)]) || x.o.t.createdAt - y.o.t.createdAt);
+    const laneEnd = [];
+    segs.forEach(sg => { let l = laneEnd.findIndex(e => e < sg.c1); if (l < 0){ l = laneEnd.length; laneEnd.push(sg.c2); } else laneEnd[l] = sg.c2; sg.lane = l; });
+    let row = "";
+    for (let i = 0; i < 7; i++){
+      const k = addDays(ws, i), dd = parse(k), out = dd.getMonth() !== m.getMonth();
+      const hol = holidayName(k), abs = absenceOn(k);
+      const dayCls = hol ? ' holiday' : isWeekend(k) ? ' weekend' : '';
+      const labels = (hol ? '<div class="cal-hol">'+esc(hol)+'</div>' : '') + (abs ? '<div class="cal-abs">'+esc(abs.type)+'</div>' : '');
+      row += '<div class="cal-cell'+dayCls+(abs&&!hol?' absent':'')+(out?' out':'')+(k===tt?' is-today':'')+'" data-date="'+k+'" style="grid-column:'+(i+1)+';grid-row:1 / -1"'+(hol?' title="Feriado: '+esc(hol)+'"':'')+'></div>'
+        + '<div class="cal-dh'+(hol?' holiday':'')+(out?' out':'')+(k===tt?' is-today':'')+'" style="grid-column:'+(i+1)+';grid-row:1"><div class="cal-num">'+dd.getDate()+'</div>'+labels+'</div>';
+    }
+    row += segs.map(bar).join("") + '<div class="cal-fill" style="grid-row:'+(laneEnd.length+2)+'"></div>';
+    weeks += '<div class="cal-wk" style="grid-template-rows:auto'+(laneEnd.length ? ' repeat('+laneEnd.length+',auto)' : '')+' 1fr">'+row+'</div>';
+  }
+  let agenda = "";
   for (let d = new Date(start); d <= end; d.setDate(d.getDate()+1)){
     const k = ymd(d), items = byDay[k] || [], out = d.getMonth() !== m.getMonth();
     if (!out) items.forEach(e => counted[calStatus(e.t)].add(e.t.id));
@@ -931,14 +990,13 @@ function renderCalendar(){
     const abs = absenceOn(k);
     const holHtml = (hol ? '<div class="cal-hol">'+esc(hol)+'</div>' : '') + (abs ? '<div class="cal-abs">'+esc(abs.type)+'</div>' : '');
     const html = items.map(chip).join("") + gh.map(ghostChip).join("");
-    grid += '<div class="cal-cell'+dayCls+(abs&&!hol?' absent':'')+(out?' out':'')+(k===tt?' is-today':'')+'" data-date="'+k+'"'+(hol?' title="Feriado: '+esc(hol)+'"':'')+'><div class="cal-num">'+d.getDate()+'</div>'+holHtml+html+'</div>';
     if (!out && (items.length || gh.length || hol || abs)) agenda += '<div class="ag-day'+(hol?' holiday':abs?' absent':'')+(k===tt?' is-today':'')+'"><div class="ag-h">'+esc(fmtLong(k))+(hol?' · Feriado':'')+'</div>'+holHtml+html+'</div>';
   }
   const lg = s => '<span><i class="lg-'+s+'"></i>'+ST_LABEL[s]+' <b>'+counted[s].size+'</b></span>';
   document.getElementById("body").innerHTML =
     '<div class="legend">'+lg("ok")+lg("doing")+lg("late")+lg("wait")+'<span><i class="lg-ghost"></i>Repetición programada</span><span><i class="lg-hol"></i>Feriado</span><span><i class="lg-abs"></i>Vacaciones o permiso</span><span><i class="lg-we"></i>Fin de semana</span><span class="cal-hint">Arrastra una tarea para moverla; estira sus bordes para cambiar los días</span></div>'
     + '<div class="cal-week"><span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span></div>'
-    + '<div class="cal-grid">'+grid+'</div>'
+    + '<div class="cal-grid cal-weeks">'+weeks+'</div>'
     + '<div class="agenda">'+(agenda || '<p class="none">No hay tareas este mes.</p>')+'</div>';
 }
 
@@ -1221,11 +1279,11 @@ function calPreview(range){
     const k = c.dataset.date; if (k >= (range.ns || range.nd) && k <= range.nd) c.classList.add("drop");
   });
 }
-function cellAt(x, y){ const el = document.elementFromPoint(x, y); return el && el.closest(".cal-grid .cal-cell[data-date]"); }
+function cellAt(x, y){ return (document.elementsFromPoint(x, y) || []).find(el => el.matches && el.matches(".cal-grid .cal-cell[data-date]")) || null; }
 bodyEl.addEventListener("pointerdown", e => {
   if (view !== "calendar" || e.button !== 0) return;
   const chip = e.target.closest(".cal-grid .cal-task:not(.ghost)"); if (!chip) return;
-  const t = byId(chip.dataset.id), cell = chip.closest(".cal-cell[data-date]"); if (!t || !cell) return;
+  const t = byId(chip.dataset.id), cell = cellAt(e.clientX, e.clientY); if (!t || !cell) return;
   const rs = e.target.closest("[data-rs]");
   calDrag = {t, chip, mode: rs ? rs.dataset.rs : "move", from: cell.dataset.date, x: e.clientX, y: e.clientY, active: !!rs, to: cell.dataset.date};
   if (rs){ document.body.classList.add("cal-resize"); calPreview(calNewDates(t, calDrag.mode, calDrag.from, calDrag.to)); e.preventDefault(); }
