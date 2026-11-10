@@ -4,6 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Mis tareas</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#F3F4F1" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#131816" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -34,6 +40,7 @@
   color-scheme:dark;
 }
 *,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
 html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
 body{margin:0;height:100%;background:var(--bg);color:var(--ink);
   font-family:"Figtree",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:15px;line-height:1.45}
@@ -410,6 +417,7 @@ body.cal-resize,body.cal-resize *{cursor:ew-resize!important}
     <label class="search"><span id="searchIco"></span><input id="q" type="search" placeholder="Buscar" aria-label="Buscar tareas"></label>
     <nav class="nav" id="nav"></nav>
     <div class="side-foot">
+      <button class="ghost" id="installBtn" hidden></button>
       <button class="ghost" id="newList"></button>
       <div class="row"><button class="ghost" id="backupBtn"></button><button class="ghost" id="logoutBtn"></button></div>
       <div class="sync" id="sync"><span class="dot"></span><span id="syncTxt">Conectando…</span></div>
@@ -1806,6 +1814,22 @@ document.getElementById("backupBtn").innerHTML = I.save + "Respaldo";
 document.getElementById("logoutBtn").innerHTML = I.x + "Cerrar sesión";
 document.getElementById("loginMark").innerHTML = document.getElementById("brandMark").innerHTML;
 document.getElementById("logoutBtn").addEventListener("click", logout);
+
+/* App instalable (PWA): ícono en el teléfono y apertura sin la barra del navegador */
+if ("serviceWorker" in navigator && location.protocol === "https:"){
+  window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+}
+let installEvt = null;
+const installBtn = document.getElementById("installBtn");
+installBtn.innerHTML = I.save + "Instalar app";
+window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); installEvt = e; installBtn.hidden = false; });
+installBtn.addEventListener("click", async () => {
+  if (!installEvt) return;
+  installEvt.prompt();
+  try { await installEvt.userChoice; } catch(err){}
+  installEvt = null; installBtn.hidden = true;
+});
+window.addEventListener("appinstalled", () => { installBtn.hidden = true; toast("App instalada. La encuentras como “Mis tareas”."); });
 document.addEventListener("visibilitychange", () => { if (!document.hidden && token) loadRemote(false); });
 window.addEventListener("online", () => { if (token){ lastError = false; flush(); } });
 snapshotShadow();
