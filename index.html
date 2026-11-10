@@ -54,7 +54,8 @@ svg{display:block;flex:none}
 .nav-item:hover{background:var(--hover)}
 .nav-item.active{background:var(--surface);box-shadow:var(--shadow);font-weight:600}
 .nav-item .count{margin-left:auto;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
-.nav-item .ico-sun{color:var(--amber)} .nav-item .ico-star{color:var(--danger)}
+.nav-item .ico-sun{color:var(--amber)} .nav-item .ico-star{color:var(--danger)} .nav-item .ico-late{color:var(--danger)}
+.nav-item[data-view="late"] .count{color:var(--danger);font-weight:700}
 .nav-item .ico-cal{color:var(--doing)} .nav-item .ico-home{color:var(--pine)}
 .nav-item .ico-list{color:var(--muted)} .nav-item .ico-leave{color:var(--leave)} .nav-item .ico-month{color:var(--doing)} .nav-item .ico-gantt{color:var(--pause)} .nav-item .ico-board{color:var(--pine)} .nav-item .ico-report{color:var(--pine)}
 .nav hr{border:0;border-top:1px solid var(--line);margin:8px 10px}
@@ -260,11 +261,11 @@ body.cal-resize,body.cal-resize *{cursor:ew-resize!important}
 .kb-filter{border:1px solid var(--line);border-radius:9px;padding:6px 8px;background:var(--surface);font-size:14px}
 .kb{display:flex;gap:12px;overflow-x:auto;align-items:flex-start;padding-bottom:12px}
 .kb-col{flex:0 0 290px;background:var(--gray-soft);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px;max-height:calc(100vh - 190px);border:2px solid transparent}
-.kb-col.doing{background:var(--doing-soft)} .kb-col.paused{background:var(--pause-soft)} .kb-col.done{background:var(--pine-soft)}
+.kb-col.late{background:var(--danger-soft)} .kb-col.doing{background:var(--doing-soft)} .kb-col.paused{background:var(--pause-soft)} .kb-col.done{background:var(--pine-soft)}
 .kb-col.over{border-color:var(--pine);border-style:dashed}
 .kb-head{display:flex;align-items:center;gap:8px;font-weight:700;font-size:13px;padding:2px 2px 4px}
 .kb-pill{color:var(--bg);border-radius:6px;padding:2px 8px;font-size:12px;letter-spacing:.03em;text-transform:uppercase}
-.kb-pill.todo{background:var(--muted)} .kb-pill.doing{background:var(--doing)} .kb-pill.paused{background:var(--pause)} .kb-pill.done{background:var(--pine)}
+.kb-pill.late{background:var(--danger)} .kb-pill.todo{background:var(--muted)} .kb-pill.doing{background:var(--doing)} .kb-pill.paused{background:var(--pause)} .kb-pill.done{background:var(--pine)}
 .kb-count{color:var(--muted);font-weight:500}
 .kb-list{display:flex;flex-direction:column;gap:8px;overflow-y:auto;min-height:44px;padding:2px}
 .kb-card{background:var(--surface);border-radius:10px;padding:10px 12px;box-shadow:var(--shadow);cursor:grab;border:1px solid transparent;user-select:none;-webkit-user-select:none}
@@ -285,6 +286,13 @@ body.cal-resize,body.cal-resize *{cursor:ew-resize!important}
 .kb-more{font-size:12.5px;color:var(--muted);text-align:center;padding:4px}
 .kb-more button{color:var(--pine);font-weight:600;text-decoration:underline}
 .kb-empty{font-size:12.5px;color:var(--muted);text-align:center;padding:10px 4px}
+.kb-late-info{margin-top:6px;font-size:12.5px;color:var(--danger);font-weight:600}
+.kb-late-info small{color:var(--muted);font-weight:500}
+.kb-q{display:flex;flex-wrap:wrap;gap:5px;margin-top:9px}
+.kb-q button{font-size:12px;padding:4px 9px;border-radius:999px;background:var(--bg);border:1px solid var(--line);font-weight:500}
+.kb-q button:hover{border-color:var(--pine);color:var(--pine)}
+.kb-q button.q-pause:hover{border-color:var(--pause);color:var(--pause)}
+.kb-hint{font-size:12px;color:var(--muted);padding:0 4px 2px;line-height:1.35}
 .cal-wk .cal-fill{grid-column:1/-1;min-height:6px}
 @media (max-width:760px){.cal-grid.cal-weeks{display:none}}
 .st-ok{background:var(--pine-soft);border-color:var(--pine)}
@@ -431,6 +439,7 @@ const I = {
   sun:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
   star:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3.5l2.6 5.3 5.8.8-4.2 4.1 1 5.8L12 16.8l-5.2 2.7 1-5.8-4.2-4.1 5.8-.8z"/></svg>',
   cal:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>',
+  late:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6"/></svg>',
   board:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3.5" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="10" rx="1.5"/><rect x="16.5" y="4" width="4" height="13" rx="1.5"/></svg>',
   gantt:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h8M8 12h9M6 18h6"/><path d="M3 3v18" stroke-width="1.5"/></svg>',
   month:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4M8 14h2M14 14h2M8 17h2"/></svg>',
@@ -790,6 +799,7 @@ function tasksFor(v){
   if (v === "myday") return all.filter(x => x.myDay === t);
   if (v === "important") return all.filter(x => x.important);
   if (v === "planned") return all.filter(x => x.due);
+  if (v === "late") return all.filter(isLate);
   if (v === "search"){ const q = query.toLowerCase();
     return all.filter(x => (x.title+" "+x.notes+" "+x.steps.map(s=>s.title).join(" ")).toLowerCase().includes(q)); }
   if (v.startsWith("list:")) { const id = v.slice(5); return all.filter(x => x.listId === id); }
@@ -816,6 +826,7 @@ function navBtn(v, ico, cls, label, count){
 }
 function renderSide(){
   let h = navBtn("myday", I.sun, "ico-sun", "Mi día", countOpen("myday"))
+    + navBtn("late", I.late, "ico-late", "Atrasadas", countOpen("late"))
     + navBtn("important", I.star, "ico-star", "Importante", countOpen("important"))
     + navBtn("planned", I.cal, "ico-cal", "Planificado", countOpen("planned"))
     + navBtn("calendar", I.month, "ico-month", "Calendario", 0)
@@ -863,11 +874,12 @@ function emptyState(v){
     myday:["Organiza tu día","Escribe arriba lo que harás hoy y presiona Enter. Revisa las sugerencias para traer tareas vencidas o pendientes de ayer."],
     important:["Nada marcado como importante","Marca una tarea con la estrella para verla aquí."],
     planned:["Sin fechas de vencimiento","Las tareas con fecha aparecen aquí, agrupadas por día."],
+    late:["¡Sin atrasos!","Las tareas cuya fecha de vencimiento ya pasó aparecen aquí (excepto las que están en pausa)."],
     search:["Sin resultados","Prueba con otra palabra."],
     list:["Lista vacía","Agrega tu primera tarea arriba."]
   };
   const m = msgs[v] || msgs.list;
-  const ico = v==="myday"?I.sun:v==="important"?I.star:v==="planned"?I.cal:I.list;
+  const ico = v==="myday"?I.sun:v==="important"?I.star:v==="planned"?I.cal:v==="late"?I.late:I.list;
   return '<div class="empty"><div class="big">'+ico.replace('width="20" height="20"','width="54" height="54"')+'</div><strong>'+m[0]+'</strong>'+m[1]+'</div>';
 }
 function renderMain(){
@@ -885,7 +897,8 @@ function renderMain(){
   if (view === "board"){ renderBoard(); return; }
   if (view === "leave"){ renderLeave(); return; }
 
-  let name = {myday:"Mi día",important:"Importante",planned:"Planificado",search:"Buscar"}[view] || listName(view.slice(5));
+  let name = {myday:"Mi día",important:"Importante",planned:"Planificado",search:"Buscar",late:"Atrasadas"}[view] || listName(view.slice(5));
+  if (view === "late") sub.textContent = "Tareas cuya fecha ya pasó. Ábrelas para completarlas, reprogramarlas o pausarlas.";
   if (view === "search") name = "Buscar: " + query;
   if (document.activeElement !== title) title.value = name;
   if (view === "myday"){
@@ -897,7 +910,7 @@ function renderMain(){
   if (isCustom) acts.innerHTML = '<button class="chip-btn danger" data-act="delList">'+I.trash+'Eliminar lista</button>';
 
   let h = "";
-  if (view !== "search") h += '<div class="add"><span class="plus">'+I.plus+'</span><input id="addInput" placeholder="Agregar una tarea" aria-label="Agregar una tarea" autocomplete="off"></div>';
+  if (view !== "search" && view !== "late") h += '<div class="add"><span class="plus">'+I.plus+'</span><input id="addInput" placeholder="Agregar una tarea" aria-label="Agregar una tarea" autocomplete="off"></div>';
 
   if (view === "myday" && showSugg){
     const sg = suggestions();
@@ -1166,8 +1179,9 @@ function renderGantt(){
 }
 
 /* ---------- Tablero (Kanban por estado) ---------- */
+const isLate = t => !t.done && !t.paused && !!t.due && t.due < today();
 const KB_COLS = [
-  {id:"todo", label:"Por iniciar"}, {id:"doing", label:"En curso"}, {id:"paused", label:"En pausa"}, {id:"done", label:"Completada"}
+  {id:"late", label:"Atrasadas"}, {id:"todo", label:"Por iniciar"}, {id:"doing", label:"En curso"}, {id:"paused", label:"En pausa"}, {id:"done", label:"Completada"}
 ];
 const kbState = t => t.done ? "done" : t.paused ? "paused" : t.doing ? "doing" : "todo";
 function renderBoard(){
@@ -1181,8 +1195,9 @@ function renderBoard(){
   const tasks = state.tasks.filter(t => boardList === "all" || t.listId === boardList);
   const byDue = (a, b) => (a.due || "9999").localeCompare(b.due || "9999") || (b.important - a.important) || a.createdAt - b.createdAt;
   const cols = {
-    todo: tasks.filter(t => kbState(t) === "todo").sort(byDue),
-    doing: tasks.filter(t => kbState(t) === "doing").sort(byDue),
+    late: tasks.filter(isLate).sort(byDue),
+    todo: tasks.filter(t => kbState(t) === "todo" && !isLate(t)).sort(byDue),
+    doing: tasks.filter(t => kbState(t) === "doing" && !isLate(t)).sort(byDue),
     paused: tasks.filter(t => kbState(t) === "paused").sort((a,b) => (a.pausedAt || "").localeCompare(b.pausedAt || "") || byDue(a,b)),
     done: tasks.filter(t => kbState(t) === "done").sort(sortDone)
   };
@@ -1201,21 +1216,39 @@ function renderBoard(){
     return '<div class="kb-card'+(st==='done'?' done':'')+(late?' late':'')+(selected===t.id?' sel':'')+'" draggable="true" data-act="open" data-id="'+esc(t.id)+'" tabindex="0" role="button">'
       + '<div class="kb-title">'+esc(t.title)+'</div>'
       + (st === "paused" && (t.pauseReason || t.pausedAt) ? '<div class="kb-reason">'+esc(pauseText(t))+'</div>' : '')
-      + (meta.length ? '<div class="kb-meta">'+meta.join("")+'</div>' : '') + '</div>';
+      + (late ? '<div class="kb-late-info">'+(n => 'Atrasada ' + n + (n === 1 ? ' día' : ' días'))(Math.round((parse(tt) - parse(t.due)) / 86400000))+' <small>· estaba '+(st === "doing" ? 'en curso' : 'por iniciar')+'</small></div>' : '')
+      + (meta.length ? '<div class="kb-meta">'+meta.join("")+'</div>' : '')
+      + (late ? '<div class="kb-q">'
+          + '<button data-act="kbq" data-q="done" title="Ya la terminé, me faltó marcarla">✓ Ya está hecha</button>'
+          + '<button data-act="kbq" data-q="today" title="Cambiar el vencimiento a hoy">Hoy</button>'
+          + '<button data-act="kbq" data-q="next" title="Cambiar el vencimiento al siguiente día hábil">'+esc(dueLabel(nextWorkday(addDays(tt,1))))+'</button>'
+          + '<button class="q-pause" data-act="kbq" data-q="pause" title="Estoy esperando información de otra persona">⏸ Pausar</button>'
+          + '</div>' : '')
+      + '</div>';
   };
   const placeholder = {todo:"+ Agregar tarea", doing:"+ Agregar tarea en curso", paused:"+ Agregar tarea en pausa"};
   document.getElementById("body").innerHTML = '<div class="kb">' + KB_COLS.map(c => {
     const items = cols[c.id];
     const count = c.id === "done" && !boardAllDone ? items.length + (doneTotal > items.length ? ' de ' + doneTotal : '') : items.length;
     return '<div class="kb-col '+c.id+'" data-col="'+c.id+'"><div class="kb-head"><span class="kb-pill '+c.id+'">'+c.label+'</span><span class="kb-count">'+count+'</span></div>'
-      + '<div class="kb-list">' + (items.length ? items.map(card).join("") : '<div class="kb-empty">Arrastra tareas aquí</div>') + '</div>'
-      + (c.id === "done"
+      + (c.id === "late" && items.length ? '<div class="kb-hint">¿La terminaste, necesitas más tiempo o esperas información? Usa los botones de cada tarjeta.</div>' : '')
+      + '<div class="kb-list">' + (items.length ? items.map(card).join("") : '<div class="kb-empty">'+(c.id === "late" ? '¡Sin atrasos!' : 'Arrastra tareas aquí')+'</div>') + '</div>'
+      + (c.id === "late" ? '' : c.id === "done"
           ? (doneTotal > cols.done.length || boardAllDone ? '<div class="kb-more">'+(boardAllDone ? 'Mostrando todas · ' : 'Últimos 30 días · ')+'<button data-act="kbAllDone">'+(boardAllDone ? 'Ver solo últimos 30 días' : 'Ver todas')+'</button></div>' : '')
           : '<div class="kb-add"><input data-kbadd="'+c.id+'" placeholder="'+placeholder[c.id]+'" aria-label="'+placeholder[c.id]+'" autocomplete="off"></div>')
       + '</div>';
   }).join("") + '</div>';
 }
+function quickLate(t, q){
+  if (q === "done"){ setTaskState(t, "done"); return; }
+  if (q === "pause"){ setTaskState(t, "paused"); openTask(t.id); const r = document.getElementById("dPauseReason"); if (r) r.focus(); return; }
+  const nd = q === "today" ? today() : nextWorkday(addDays(today(), 1));
+  t.due = nd; if (t.start && t.start >= nd) t.start = "";
+  commit();
+  toast("“" + t.title + "” reprogramada para " + (q === "today" ? "hoy" : fmtShort(nd)) + ".");
+}
 function setTaskState(t, st){
+  if (st === "late"){ toast("A “Atrasadas” se llega por fecha. Para mover una tarea aquí, cambia su vencimiento."); return; }
   if (kbState(t) === st) return;
   if (st === "done"){ toggleTask(t.id); toast("“" + t.title + "” completada."); return; }
   if (t.done){ t.done = false; t.completedAt = 0; }
@@ -1573,7 +1606,11 @@ bodyEl.addEventListener("drop", e => {
   e.preventDefault();
   const t = byId(kbDragId); kbDragId = null;
   document.querySelectorAll(".kb-col.over").forEach(x => x.classList.remove("over"));
-  if (t) setTaskState(t, col.dataset.col);
+  if (!t) return;
+  const target = col.dataset.col;
+  if (target === "done" || target === "paused" || target === "late"){ setTaskState(t, target); return; }
+  if (kbState(t) !== target) setTaskState(t, target);
+  if (isLate(t)) setTimeout(() => toast("“" + t.title + "” sigue atrasada (venció el " + fmtShort(t.due) + "). Usa Hoy o el siguiente día hábil para reprogramarla."), 50);
 });
 bodyEl.addEventListener("dragend", () => {
   kbDragId = null;
@@ -1593,7 +1630,12 @@ bodyEl.addEventListener("keydown", e => {
   }
   if (e.target.classList && e.target.classList.contains("kb-card") && (e.key === "Enter" || e.key === " ")){ e.preventDefault(); openTask(e.target.dataset.id); }
 });
-bodyEl.addEventListener("click", e => { if (e.target.closest && e.target.closest('[data-act="kbAllDone"]')){ boardAllDone = !boardAllDone; renderMain(); } });
+bodyEl.addEventListener("click", e => {
+  if (!e.target.closest) return;
+  if (e.target.closest('[data-act="kbAllDone"]')){ boardAllDone = !boardAllDone; renderMain(); return; }
+  const q = e.target.closest('[data-act="kbq"]');
+  if (q){ const card = q.closest(".kb-card"), t = card && byId(card.dataset.id); if (t) quickLate(t, q.dataset.q); }
+});
 
 /* Detalle */
 const detailEl = document.getElementById("detail");
