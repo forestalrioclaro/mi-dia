@@ -11,7 +11,7 @@
 :root{
   --bg:#F3F4F1; --surface:#FFFFFF; --side:#E7EAE5; --ink:#1D2621; --muted:#65706A;
   --line:#D8DDD6; --pine:#2E6A4D; --pine-ink:#FFFFFF; --pine-soft:#DCEBE2; --amber:#A86C12;
-  --amber-soft:#F6E9D2; --danger:#B03D2B; --danger-soft:#F7E0DB; --doing:#C2620F; --doing-soft:#FBE7D4; --gray-soft:#ECEEEA; --leave:#5B47B0; --leave-soft:#ECE8FA;
+  --amber-soft:#F6E9D2; --danger:#B03D2B; --danger-soft:#F7E0DB; --doing:#C2620F; --doing-soft:#FBE7D4; --gray-soft:#ECEEEA; --leave:#5B47B0; --leave-soft:#ECE8FA; --pause:#2D6A9F; --pause-soft:#DDEAF6;
   --hover:rgba(29,38,33,.05); --shadow:0 1px 2px rgba(29,38,33,.08),0 4px 16px rgba(29,38,33,.06);
   color-scheme:light;
   box-sizing:border-box;
@@ -21,7 +21,7 @@
   :root:not([data-theme="light"]){
     --bg:#131816; --surface:#1B2220; --side:#171D1A; --ink:#E5EAE6; --muted:#97A29B;
     --line:#2B3530; --pine:#6DB690; --pine-ink:#0F1A14; --pine-soft:#20352A; --amber:#E2AA4E;
-    --amber-soft:#3A2E1A; --danger:#E67C68; --danger-soft:#3D221E; --doing:#F0A060; --doing-soft:#3A2818; --gray-soft:#262E2A; --leave:#B5A6F2; --leave-soft:#2B2642;
+    --amber-soft:#3A2E1A; --danger:#E67C68; --danger-soft:#3D221E; --doing:#F0A060; --doing-soft:#3A2818; --gray-soft:#262E2A; --leave:#B5A6F2; --leave-soft:#2B2642; --pause:#86B6E3; --pause-soft:#1D2C3B;
     --hover:rgba(229,234,230,.06); --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 16px rgba(0,0,0,.3);
     color-scheme:dark;
   }
@@ -29,7 +29,7 @@
 :root[data-theme="dark"]{
   --bg:#131816; --surface:#1B2220; --side:#171D1A; --ink:#E5EAE6; --muted:#97A29B;
   --line:#2B3530; --pine:#6DB690; --pine-ink:#0F1A14; --pine-soft:#20352A; --amber:#E2AA4E;
-  --amber-soft:#3A2E1A; --danger:#E67C68; --danger-soft:#3D221E; --doing:#F0A060; --doing-soft:#3A2818; --gray-soft:#262E2A; --leave:#B5A6F2; --leave-soft:#2B2642;
+  --amber-soft:#3A2E1A; --danger:#E67C68; --danger-soft:#3D221E; --doing:#F0A060; --doing-soft:#3A2818; --gray-soft:#262E2A; --leave:#B5A6F2; --leave-soft:#2B2642; --pause:#86B6E3; --pause-soft:#1D2C3B;
   --hover:rgba(229,234,230,.06); --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 16px rgba(0,0,0,.3);
   color-scheme:dark;
 }
@@ -107,6 +107,12 @@ svg{display:block;flex:none}
 .meta .late{color:var(--danger);font-weight:600}
 .meta .today{color:var(--doing);font-weight:600}
 .badge-doing{background:var(--doing-soft);color:var(--doing);font-weight:600;border-radius:6px;padding:1px 7px}
+.badge-pause{background:var(--pause-soft);color:var(--pause);font-weight:600;border-radius:6px;padding:1px 7px}
+.task.paused .ttl{color:var(--muted)}
+.opt.on.pause{color:var(--pause)}
+.pause-field{display:flex;align-items:center;gap:12px;padding:0 14px 12px 46px}
+.pause-field input{flex:1;min-width:0;border:1px solid var(--line);border-radius:8px;padding:7px 9px;background:var(--bg)}
+.group-h.paused{color:var(--pause)}
 .star{color:var(--muted);padding:4px;border-radius:6px}
 .star:hover{color:var(--danger)}
 .star.on{color:var(--danger)}
@@ -185,7 +191,7 @@ svg{display:block;flex:none}
 .legend span{display:inline-flex;align-items:center;gap:6px}
 .legend i{width:11px;height:11px;border-radius:3px;display:inline-block}
 .legend b{color:var(--ink);font-weight:600}
-.lg-ok{background:var(--pine)} .lg-doing{background:var(--doing)} .lg-late{background:var(--danger)} .lg-wait{background:var(--muted)}
+.lg-ok{background:var(--pine)} .lg-doing{background:var(--doing)} .lg-late{background:var(--danger)} .lg-wait{background:var(--muted)} .lg-paused{background:var(--pause)}
 .cal-week,.cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
 .cal-week{font-size:12.5px;color:var(--muted);font-weight:600;margin-bottom:4px;padding:0 6px}
 .cal-cell{background:var(--surface);border-radius:8px;min-height:108px;padding:6px;display:flex;flex-direction:column;gap:3px;border:1px solid transparent;min-width:0}
@@ -226,6 +232,7 @@ body.cal-resize,body.cal-resize *{cursor:ew-resize!important}
 .st-doing{background:var(--doing-soft);border-color:var(--doing)}
 .st-late{background:var(--danger-soft);border-color:var(--danger)}
 .st-wait{background:var(--gray-soft);border-color:var(--muted)}
+.st-paused{background:var(--pause-soft);border-color:var(--pause);border-left-style:dashed}
 .agenda{display:none}
 .agenda .none{color:var(--muted);text-align:center;padding:30px 10px}
 @media (max-width:760px){
@@ -378,6 +385,7 @@ const I = {
   menu:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>',
   x:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
   close:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg>',
+  pause:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M10 9v6M14 9v6"/></svg>',
   play:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M10 8.5l5 3.5-5 3.5z"/></svg>',
   repeat:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3l3 3-3 3"/><path d="M4 11V9a3 3 0 013-3h13M7 21l-3-3 3-3"/><path d="M20 13v2a3 3 0 01-3 3H4"/></svg>',
   search:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg>',
@@ -493,7 +501,8 @@ function normalize(s){
   const lists = Array.isArray(s.lists) ? s.lists.filter(l => l && l.id && l.id !== "tasks").map(l => ({id:String(l.id), name:String(l.name||"Lista sin título")})) : [];
   const ids = new Set(["tasks", ...lists.map(l => l.id)]);
   const tasks = Array.isArray(s.tasks) ? s.tasks.filter(t => t && t.id).map(t => ({
-    id:String(t.id), title:String(t.title||""), done:!!t.done, important:!!t.important, doing:!!t.doing,
+    id:String(t.id), title:String(t.title||""), done:!!t.done, important:!!t.important, doing:!!t.doing && !t.paused,
+    paused:!!t.paused && !t.done, pauseReason:String(t.pauseReason||""), pausedAt:t.pausedAt||"",
     myDay:t.myDay||"", due:t.due||"", start:(t.due && t.start && t.start <= t.due) ? t.start : "", repeat:(t.repeat && REPEAT[t.repeat]) ? t.repeat : "",
     repeatDays:Array.isArray(t.repeatDays) ? [...new Set(t.repeatDays.map(Number).filter(n => n >= 0 && n <= 6))] : [],
     listId: ids.has(t.listId) ? t.listId : "tasks", notes:String(t.notes||""),
@@ -552,16 +561,18 @@ async function api(action, data){
 const stamp = ms => { if (!ms) return ""; const d = new Date(ms); return ymd(d)+" "+pad(d.getHours())+":"+pad(d.getMinutes()); };
 function taskToRow(t){
   return {id:t.id, titulo:t.title, lista:listName(t.listId),
-    estado:t.done ? "Completada" : t.doing ? "En curso" : "Pendiente",
+    estado:t.done ? "Completada" : t.paused ? "Pausada" : t.doing ? "En curso" : "Pendiente",
     importante:t.important ? "Sí" : "No", mi_dia:t.myDay, vence:t.due, inicio:t.start,
     repetir:t.repeat ? REPEAT[t.repeat] : "", dias_repeticion:t.repeat === "days" ? repeatText(t) : "",
     nota:t.notes, pasos:t.steps.length ? JSON.stringify(t.steps) : "",
     creada:stamp(t.createdAt), completada:stamp(t.completedAt), lista_id:t.listId,
-    creada_ms:String(t.createdAt), completada_ms:t.completedAt ? String(t.completedAt) : ""};
+    creada_ms:String(t.createdAt), completada_ms:t.completedAt ? String(t.completedAt) : "",
+    motivo_pausa:t.paused ? t.pauseReason : "", pausada_desde:t.paused ? t.pausedAt : ""};
 }
 function rowToTask(r){
   let steps = []; try { steps = r.pasos ? JSON.parse(r.pasos) : []; } catch(e){}
   return {id:r.id, title:r.titulo, done:r.estado === "Completada", doing:r.estado === "En curso",
+    paused:r.estado === "Pausada", pauseReason:r.motivo_pausa || "", pausedAt:r.pausada_desde || "",
     important:r.importante === "Sí", myDay:r.mi_dia, due:r.vence, start:r.inicio || "", repeat:REPEAT_BY_LABEL[r.repetir] || "",
     repeatDays:String(r.dias_repeticion||"").split(",").map(x => DAY_SHORT.indexOf(x.trim())).filter(n => n >= 0),
     listId:r.lista_id || "tasks", notes:r.nota, steps, createdAt:+r.creada_ms, completedAt:+r.completada_ms};
@@ -701,6 +712,7 @@ function commit(opts){
 const listName = id => id === "tasks" ? "Tareas" : ((state.lists.find(l => l.id === id) || {}).name || "Tareas");
 const byId = id => state.tasks.find(t => t.id === id);
 function sortOpen(a,b){
+  if (!!a.paused !== !!b.paused) return a.paused ? 1 : -1;
   if (a.doing !== b.doing) return a.doing ? -1 : 1;
   if (a.important !== b.important) return a.important ? -1 : 1;
   return b.createdAt - a.createdAt;
@@ -720,7 +732,7 @@ function tasksFor(v){
 function countOpen(v){ return tasksFor(v).filter(x => !x.done).length; }
 function suggestions(){
   const t = today(), soon = addDays(t,2);
-  return state.tasks.filter(x => !x.done && x.myDay !== t).map(x => {
+  return state.tasks.filter(x => !x.done && !x.paused && x.myDay !== t).map(x => {
     let why = "";
     if (x.due && x.due < t) why = "Vencida " + dueLabel(x.due).toLowerCase();
     else if (x.due === t) why = "Vence hoy";
@@ -754,16 +766,17 @@ function taskRow(t, showList){
   const tt = today();
   const meta = [];
   if (t.doing && !t.done) meta.push('<span class="badge-doing">En curso</span>');
+  if (t.paused && !t.done) meta.push('<span class="badge-pause" title="'+esc(pauseText(t))+'">En pausa'+(t.pauseReason ? ': '+esc(t.pauseReason) : '')+'</span>');
   if (showList) meta.push('<span>'+esc(listName(t.listId))+'</span>');
   if (t.myDay === tt && view !== "myday") meta.push('<span>'+I.sun.replace('width="20" height="20"','width="13" height="13"')+'Mi día</span>');
   if (t.steps.length){ const d = t.steps.filter(s=>s.done).length; meta.push('<span>'+I.steps+d+' de '+t.steps.length+'</span>'); }
   if (t.due){
-    const cls = (!t.done && t.due < tt) ? "late" : (t.due === tt ? "today" : "");
+    const cls = (!t.done && !t.paused && t.due < tt) ? "late" : (t.due === tt ? "today" : "");
     meta.push('<span class="'+cls+'">'+I.cal.replace('width="20" height="20"','width="13" height="13"')+esc(hasSpan(t) ? dueLabel(t.start) + " – " + dueLabel(t.due) : dueLabel(t.due))+'</span>');
   }
   if (t.repeat && !t.done) meta.push('<span>↻ '+esc(repeatText(t))+'</span>');
   if (t.notes.trim()) meta.push('<span>'+I.note+'Nota</span>');
-  return '<li class="task'+(t.done?' done':'')+(selected===t.id?' sel':'')+'" data-id="'+esc(t.id)+'">'
+  return '<li class="task'+(t.done?' done':'')+(t.paused&&!t.done?' paused':'')+(selected===t.id?' sel':'')+'" data-id="'+esc(t.id)+'">'
     + '<button class="chk" data-act="toggle" aria-label="'+(t.done?'Marcar como pendiente':'Marcar como completada')+'">'+I.check+'</button>'
     + '<div class="tbody" data-act="open" tabindex="0" role="button"><div class="ttl">'+esc(t.title)+'</div><div class="meta">'+meta.join("")+'</div></div>'
     + '<button class="star'+(t.important?' on':'')+'" data-act="star" aria-label="'+(t.important?'Quitar importancia':'Marcar como importante')+'">'+I.star+'</button></li>';
@@ -832,13 +845,13 @@ function renderMain(){
   if (!items.length) h += emptyState(view.startsWith("list:") ? "list" : view);
   else if (view === "planned"){
     const t = today(), tm = addDays(t,1), wk = addDays(t,7);
-    const g = {late:[],today:[],tom:[],week:[],later:[]};
+    const g = {late:[],today:[],tom:[],week:[],later:[],paused:[]};
     open.sort((a,b) => a.due.localeCompare(b.due) || sortOpen(a,b)).forEach(x => {
-      if (x.due < t) g.late.push(x); else if (x.due === t) g.today.push(x);
+      if (x.paused) g.paused.push(x); else if (x.due < t) g.late.push(x); else if (x.due === t) g.today.push(x);
       else if (x.due === tm) g.tom.push(x); else if (x.due <= wk) g.week.push(x); else g.later.push(x);
     });
     h += block("Vencidas", g.late, true, "late") + block("Hoy", g.today, true) + block("Mañana", g.tom, true)
-      + block("Próximos 7 días", g.week, true) + block("Más adelante", g.later, true);
+      + block("Próximos 7 días", g.week, true) + block("Más adelante", g.later, true) + block("En pausa", g.paused, true, "paused");
     if (!open.length) h += emptyState("planned");
   } else {
     h += open.length ? '<ul class="tasks">'+open.map(t => taskRow(t, showList)).join("")+'</ul>' : "";
@@ -868,6 +881,8 @@ function renderDetail(){
       + '<div class="step-add">'+I.plus+'<input id="stepInput" placeholder="'+(t.steps.length?'Siguiente paso':'Agregar paso')+'" autocomplete="off"></div></div>'
     + '<div class="card">'
       + '<button class="opt'+(inDay?' on':'')+'" data-act="dMyDay">'+I.sun+'<span>'+(inDay?'Agregada a Mi día':'Agregar a Mi día')+'</span>'+(inDay?'<span class="clear">'+I.x+'</span>':'')+'</button>'
+      + '<button class="opt pause'+(t.paused&&!t.done?' on':'')+'" data-act="dPause">'+I.pause+'<span>'+(t.paused&&!t.done?'En pausa'+(t.pausedAt?' desde el '+esc(fmtShort(t.pausedAt)):''):'Pausar tarea')+'</span>'+(t.paused&&!t.done?'<span class="clear" title="Reanudar">'+I.x+'</span>':'')+'</button>'
+      + (t.paused&&!t.done ? '<div class="pause-field"><input id="dPauseReason" value="'+esc(t.pauseReason)+'" placeholder="Motivo (ej.: esperando a Claudio)" aria-label="Motivo de la pausa" autocomplete="off"></div>' : '')
       + '<button class="opt doing'+(t.doing&&!t.done?' on':'')+'" data-act="dDoing">'+I.play+'<span>'+(t.doing&&!t.done?'En curso: estoy trabajando en esto':'Marcar como en curso')+'</span>'+(t.doing&&!t.done?'<span class="clear">'+I.x+'</span>':'')+'</button>'
     + '</div>'
     + '<div class="card">'
@@ -890,13 +905,15 @@ function autoGrow(ta){ if (!ta) return; ta.style.height = "auto"; ta.style.heigh
 /* ---------- Calendario ---------- */
 // Fecha en que aparece cada tarea: vencimiento, si no Mi día, si no fecha de término, si no fecha de creación
 function calDate(t){ return t.due || t.myDay || (t.completedAt ? ymd(new Date(t.completedAt)) : ymd(new Date(t.createdAt))); }
+function pauseText(t){ return "En pausa" + (t.pausedAt ? " desde el " + fmtShort(t.pausedAt) : "") + (t.pauseReason ? ". Motivo: " + t.pauseReason : ""); }
 function calStatus(t){
   if (t.done) return "ok";
+  if (t.paused) return "paused";
   if (t.doing) return "doing";
   if (t.due && t.due < today()) return "late";
   return "wait";
 }
-const ST_LABEL = {ok:"Completada", doing:"En desarrollo", late:"Atrasada", wait:"Por iniciar"};
+const ST_LABEL = {ok:"Completada", doing:"En desarrollo", late:"Atrasada", wait:"Por iniciar", paused:"En pausa"};
 function renderCalendar(){
   document.getElementById("title").value = "Calendario";
   const m = parse(calMonth);
@@ -911,13 +928,13 @@ function renderCalendar(){
     const days = hasSpan(t) ? spanDays(t.start, t.due) : [calDate(t)];
     days.forEach((d, i) => (byDay[d] = byDay[d] || []).push({t, i:i+1, n:days.length}));
   });
-  const order = {late:0, doing:1, wait:2, ok:3};
+  const order = {late:0, doing:1, wait:2, paused:3, ok:4};
   Object.keys(byDay).forEach(k => byDay[k].sort((x,y) => order[calStatus(x.t)] - order[calStatus(y.t)] || x.t.createdAt - y.t.createdAt));
   const start = new Date(m); start.setDate(1 - ((m.getDay()+6) % 7));
   const last = new Date(m.getFullYear(), m.getMonth()+1, 0);
   const end = new Date(last); end.setDate(last.getDate() + (6 - ((last.getDay()+6) % 7)));
   const tt = today();
-  const counted = {ok:new Set(), doing:new Set(), late:new Set(), wait:new Set()};
+  const counted = {ok:new Set(), doing:new Set(), late:new Set(), wait:new Set(), paused:new Set()};
   const chip = e => { const t = e.t, s = calStatus(t), part = e.n > 1 ? ' (día '+e.i+' de '+e.n+')' : '';
     const handles = (e.i === 1 ? '<span class="rs rs-l" data-rs="start" title="Arrastra para cambiar el inicio"></span>' : '')
       + (e.i === e.n ? '<span class="rs rs-r" data-rs="end" title="Arrastra para cambiar el vencimiento"></span>' : '');
@@ -994,7 +1011,7 @@ function renderCalendar(){
   }
   const lg = s => '<span><i class="lg-'+s+'"></i>'+ST_LABEL[s]+' <b>'+counted[s].size+'</b></span>';
   document.getElementById("body").innerHTML =
-    '<div class="legend">'+lg("ok")+lg("doing")+lg("late")+lg("wait")+'<span><i class="lg-ghost"></i>Repetición programada</span><span><i class="lg-hol"></i>Feriado</span><span><i class="lg-abs"></i>Vacaciones o permiso</span><span><i class="lg-we"></i>Fin de semana</span><span class="cal-hint">Arrastra una tarea para moverla; estira sus bordes para cambiar los días</span></div>'
+    '<div class="legend">'+lg("ok")+lg("doing")+lg("late")+lg("wait")+lg("paused")+'<span><i class="lg-ghost"></i>Repetición programada</span><span><i class="lg-hol"></i>Feriado</span><span><i class="lg-abs"></i>Vacaciones o permiso</span><span><i class="lg-we"></i>Fin de semana</span><span class="cal-hint">Arrastra una tarea para moverla; estira sus bordes para cambiar los días</span></div>'
     + '<div class="cal-week"><span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span></div>'
     + '<div class="cal-grid cal-weeks">'+weeks+'</div>'
     + '<div class="agenda">'+(agenda || '<p class="none">No hay tareas este mes.</p>')+'</div>';
@@ -1071,13 +1088,15 @@ async function leaveAction(act, id){
 
 /* ---------- Informe ---------- */
 function reportData(d){
-  const open = state.tasks.filter(t => !t.done);
+  let open = state.tasks.filter(t => !t.done);
   const doneDay = state.tasks.filter(t => t.done && t.completedAt && ymd(new Date(t.completedAt)) === d).sort(sortDone);
+  const paused = open.filter(t => t.paused).sort(sortOpen);
+  open = open.filter(t => !t.paused);
   const doing = open.filter(t => t.doing).sort(sortOpen);
   const pend = open.filter(t => !t.doing && (t.myDay === d || t.due === d || (hasSpan(t) && t.start <= d && d <= t.due))).sort(sortOpen);
   const late = open.filter(t => !t.doing && t.due && t.due < d && t.myDay !== d).sort((a,b) => a.due.localeCompare(b.due));
   const next = open.filter(t => !t.doing && t.due && t.due > d && t.due <= addDays(d,7) && t.myDay !== d && !(hasSpan(t) && t.start <= d)).sort((a,b) => a.due.localeCompare(b.due));
-  return {doing, doneDay, pend, late, next};
+  return {doing, doneDay, pend, late, next, paused};
 }
 function lineInfo(t, withDue){
   const bits = [];
@@ -1085,6 +1104,7 @@ function lineInfo(t, withDue){
   if (t.steps.length) bits.push(t.steps.filter(s=>s.done).length + " de " + t.steps.length + " pasos");
   if (withDue && t.due) bits.push("vence " + fmtShort(t.due));
   if (t.important) bits.push("importante");
+  if (t.paused){ if (t.pausedAt) bits.push("desde el " + fmtShort(t.pausedAt)); if (t.pauseReason) bits.push("motivo: " + t.pauseReason); }
   return bits;
 }
 function reportText(d){
@@ -1101,7 +1121,8 @@ function reportText(d){
     + sec("Terminadas", r.doneDay, false)
     + sec("Pendientes para el día", r.pend, true)
     + sec("Atrasadas", r.late, true)
-    + sec("Próximos 7 días", r.next, true);
+    + sec("Próximos 7 días", r.next, true)
+    + sec("En pausa", r.paused, true);
 }
 function renderReport(){
   const title = document.getElementById("title");
@@ -1114,7 +1135,7 @@ function renderReport(){
     + '<div class="rep-bar"><input type="date" id="repDate" value="'+reportDate+'" aria-label="Fecha del informe">'
     + '<button class="primary" data-act="copyRep">'+I.copy+'Copiar informe</button></div>'
     + sec("En curso", r.doing, true) + sec("Terminadas", r.doneDay, false)
-    + sec("Pendientes para el día", r.pend, true) + sec("Atrasadas", r.late, true) + sec("Próximos 7 días", r.next, true)
+    + sec("Pendientes para el día", r.pend, true) + sec("Atrasadas", r.late, true) + sec("Próximos 7 días", r.next, true) + sec("En pausa", r.paused, true)
     + '<label style="font-weight:600">Texto para copiar</label><textarea class="rep-text" id="repText" readonly>'+esc(reportText(reportDate))+'</textarea>'
     + '</div>';
 }
@@ -1130,7 +1151,7 @@ function setView(v){
 }
 function addTask(title){
   title = title.trim(); if (!title) return;
-  const t = {id:uid(), title, done:false, important:false, doing:false, myDay:"", due:"", start:"", repeat:"", repeatDays:[],
+  const t = {id:uid(), title, done:false, important:false, doing:false, myDay:"", due:"", start:"", paused:false, pauseReason:"", pausedAt:"", repeat:"", repeatDays:[],
     listId:"tasks", notes:"", steps:[], createdAt:Date.now(), completedAt:0};
   if (view === "myday") t.myDay = today();
   if (view === "important") t.important = true;
@@ -1144,14 +1165,14 @@ function toggleTask(id){
   const t = byId(id); if (!t) return;
   t.done = !t.done;
   t.completedAt = t.done ? Date.now() : 0;
-  if (t.done) t.doing = false;
+  if (t.done){ t.doing = false; t.paused = false; t.pauseReason = ""; t.pausedAt = ""; }
   let msg = "";
   if (t.done && t.repeat && t.due){
     let nd = nextRepeat(t.due, t.repeat, t.repeatDays);
     for (let i = 0; i < 400 && nd < today(); i++) nd = nextRepeat(nd, t.repeat, t.repeatDays);
     const len = hasSpan(t) ? spanDays(t.start, t.due).length : 1;
     const ns = len > 1 ? prevWorkdays(nd, len - 1) : "";
-    state.tasks.push({...t, id:uid(), done:false, completedAt:0, doing:false, myDay:"", due:nd, start:ns,
+    state.tasks.push({...t, id:uid(), done:false, completedAt:0, doing:false, paused:false, pauseReason:"", pausedAt:"", myDay:"", due:nd, start:ns,
       repeatDays:t.repeatDays.slice(), steps:t.steps.map(s => ({id:uid(), title:s.title, done:false})), createdAt:Date.now()});
     t.repeat = "";
     msg = "Próxima repetición: " + dueLabel(nd).toLowerCase();
@@ -1326,6 +1347,7 @@ detailEl.addEventListener("input", e => {
   const t = byId(selected); if (!t) return;
   if (e.target.id === "dTitle"){ t.title = e.target.value.replace(/\n/g," "); autoGrow(e.target); quietSave(); }
   else if (e.target.id === "dNotes"){ t.notes = e.target.value; quietSave(); }
+  else if (e.target.id === "dPauseReason"){ t.pauseReason = e.target.value; quietSave(); }
   else if (e.target.dataset.act === "stepEdit"){
     const s = t.steps.find(x => x.id === e.target.closest("[data-step]").dataset.step); if (s){ s.title = e.target.value; quietSave(); }
   }
@@ -1373,7 +1395,14 @@ detailEl.addEventListener("click", e => {
     case "dToggle": toggleTask(t.id); break;
     case "dStar": t.important = !t.important; commit(); break;
     case "dMyDay": t.myDay = t.myDay === today() ? "" : today(); commit(); break;
-    case "dDoing": t.doing = !(t.doing && !t.done); if (t.doing){ t.done = false; t.completedAt = 0; if (t.myDay !== today()) t.myDay = today(); } commit(); break;
+    case "dPause":
+      t.paused = !(t.paused && !t.done);
+      if (t.paused){ t.doing = false; t.done = false; t.completedAt = 0; t.pausedAt = today(); }
+      else { t.pauseReason = ""; t.pausedAt = ""; toast("Tarea reanudada."); }
+      commit();
+      if (t.paused){ const r = document.getElementById("dPauseReason"); if (r) r.focus(); }
+      break;
+    case "dDoing": t.doing = !(t.doing && !t.done); if (t.doing){ t.paused = false; t.pauseReason = ""; t.pausedAt = ""; t.done = false; t.completedAt = 0; if (t.myDay !== today()) t.myDay = today(); } commit(); break;
     case "due": { const v = b.dataset.v; t.due = v === "" ? "" : v === "mon" ? nextMonday() : addDays(today(), +v); if (!t.due){ t.repeat = ""; t.start = ""; } else if (t.start && t.start > t.due) t.start = t.due; commit(); break; }
     case "stepToggle": { const s = t.steps.find(x => x.id === stepId); s.done = !s.done; commit(); break; }
     case "stepDel": t.steps = t.steps.filter(x => x.id !== stepId); commit(); break;
