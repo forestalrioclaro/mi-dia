@@ -384,6 +384,14 @@ body.cal-resize,body.cal-resize *{cursor:ew-resize!important}
 .modal p{margin:0 0 16px}
 .modal .btns{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
 .btn-danger{background:var(--danger);color:#fff;font-weight:600;padding:9px 16px;border-radius:9px}
+.savepill{position:fixed;bottom:calc(16px + env(safe-area-inset-bottom,0px));right:16px;white-space:nowrap;z-index:55;display:flex;align-items:center;gap:7px;padding:6px 12px;border-radius:999px;font-size:12.5px;font-weight:600;background:var(--surface);color:var(--muted);border:1px solid var(--line);box-shadow:var(--shadow);transition:opacity .4s;pointer-events:none}
+.savepill.hide{opacity:0}
+.savepill .dot{width:8px;height:8px;border-radius:50%;background:var(--amber)}
+.savepill.saving .dot{animation:pulse 1s ease-in-out infinite}
+.savepill.ok{color:var(--pine);border-color:var(--pine-soft)} .savepill.ok .dot{background:var(--pine)}
+.savepill.err{color:var(--danger);border-color:var(--danger-soft);background:var(--danger-soft)} .savepill.err .dot{background:var(--danger)}
+@keyframes pulse{50%{opacity:.25}}
+@media print{.savepill{display:none}}
 .toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:500;z-index:60;box-shadow:var(--shadow);max-width:90vw}
 .toast button{color:var(--bg);font-weight:700;text-decoration:underline;margin-left:12px}
 .scrim{display:none}
@@ -428,6 +436,7 @@ body.cal-resize,body.cal-resize *{cursor:ew-resize!important}
     </div>
   </aside>
   <div class="scrim" id="scrim"></div>
+  <div class="savepill hide" id="savePill" role="status" aria-live="polite"><span class="dot"></span><span id="savePillTxt"></span></div>
   <main class="main">
     <header class="head">
       <button class="burger" id="burger" aria-label="Abrir menú"></button>
@@ -624,17 +633,34 @@ let token = localStorage.getItem(LS_TOKEN) || "";
 let pending = (() => { try { return JSON.parse(localStorage.getItem(LS_PEND) || "[]"); } catch(e){ return []; } })();
 let shadow = {t:new Map(), l:new Map(), a:new Map()};
 let flushing = false, flushTimer = null, retryDelay = 2000, lastError = false;
+let localVer = 0, loading = false, reloadAfterFlush = false;
 
 function setSync(kind, txt){
   const el = document.getElementById("sync");
   el.className = "sync " + (kind||"");
   document.getElementById("syncTxt").textContent = txt;
 }
+let pillTimer = null, pillWasBusy = false;
+function setPill(kind, txt){
+  const el = document.getElementById("savePill");
+  if (!el) return;
+  clearTimeout(pillTimer);
+  el.className = "savepill " + kind;
+  document.getElementById("savePillTxt").textContent = txt;
+}
 function updateSync(){
   if (flushing) setSync("", "Guardando en Google Sheets…");
   else if (pending.length) setSync(lastError ? "err" : "", (lastError ? "Sin conexión: " : "") + pending.length + (pending.length === 1 ? " cambio por subir" : " cambios por subir"));
   else setSync("ok", "Guardado en Google Sheets");
+  // Aviso flotante: visible mientras hay cambios sin confirmar; confirma "Guardado" y se oculta
+  if (pending.length && lastError){ pillWasBusy = true; setPill("err", "No guardado: sin conexión, reintentando…"); }
+  else if (flushing || pending.length){ pillWasBusy = true; setPill("saving", "Guardando…"); }
+  else if (pillWasBusy){
+    pillWasBusy = false; setPill("ok", "✓ Guardado");
+    pillTimer = setTimeout(() => document.getElementById("savePill").classList.add("hide"), 1800);
+  }
 }
+window.addEventListener("beforeunload", e => { if (pending.length || flushing){ e.preventDefault(); e.returnValue = ""; } });
 const apiReady = () => /^https:\/\/script\.google\.com\//.test(API_URL);
 async function api(action, data){
   const res = await fetch(API_URL, {method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"},
@@ -698,7 +724,7 @@ function diffToQueue(){
   state.absences.forEach(a => { const row = absenceToRow(a), j = JSON.stringify(row); seenA.add(a.id);
     if (shadow.a.get(a.id) !== j){ enqueue({op:"upsertAbsence", id:a.id, row}); shadow.a.set(a.id, j); changed = true; } });
   [...shadow.a.keys()].forEach(id => { if (!seenA.has(id)){ enqueue({op:"deleteAbsence", id}); shadow.a.delete(id); changed = true; } });
-  if (changed){ savePending(); scheduleFlush(); }
+  if (changed){ localVer++; savePending(); scheduleFlush(); }
 }
 function scheduleFlush(ms){ clearTimeout(flushTimer); flushTimer = setTimeout(flush, ms == null ? 800 : ms); }
 async function flush(){
@@ -715,13 +741,18 @@ async function flush(){
   }
   flushing = false; updateSync();
   if (pending.length && !flushTimer && !lastError) scheduleFlush(300);
+  else if (!pending.length && reloadAfterFlush){ reloadAfterFlush = false; loadRemote(false); }
 }
 async function loadRemote(initial){
-  if (!token) return;
-  if (pending.length){ await flush(); if (pending.length) return; }
+  if (!token || loading) return;
+  if (pending.length || flushing){ reloadAfterFlush = true; if (!flushing) flush(); return; }
   if (initial) setSync("", "Cargando desde Google Sheets…");
+  loading = true;
+  const verAtStart = localVer;
   try {
     const j = await api("load");
+    // Si cambiaste algo mientras se cargaba, esta respuesta está desactualizada: no pisar tus cambios
+    if (localVer !== verAtStart || pending.length || flushing){ loading = false; reloadAfterFlush = true; updateSync(); return; }
     const tasks = (j.tasks || []).map(rowToTask);
     const lists = (j.lists || []).map(r => ({id:r.id, name:r.nombre}));
     const absences = (j.absences || []).map(rowToAbsence);
@@ -731,7 +762,7 @@ async function loadRemote(initial){
       shadow = {t:new Map(), l:new Map(), a:new Map()};
       diffToQueue();
       toast("Subiendo tus " + state.tasks.length + " tareas existentes a Google Sheets.");
-      return;
+      loading = false; return;
     }
     state = normalize({lists, tasks, absences});
     if (selected && !byId(selected)) selected = null;
@@ -743,6 +774,7 @@ async function loadRemote(initial){
   } catch(e){
     if (!e || !e.auth){ lastError = true; setSync("err", "Sin conexión con Google Sheets"); }
   }
+  loading = false;
 }
 
 /* Ingreso y salida */
