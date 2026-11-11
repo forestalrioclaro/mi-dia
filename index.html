@@ -237,7 +237,7 @@ body.cal-resize,body.cal-resize *{cursor:ew-resize!important}
 /* Carta Gantt */
 .g-tools{display:flex;gap:4px;flex-wrap:wrap}
 .chip-btn.on{background:var(--pine-soft);color:var(--pine);font-weight:600}
-.gantt{overflow:auto;max-height:calc(100vh - 215px);border:1px solid var(--line);border-radius:12px;background:var(--surface);--glab:240px}
+.gantt{position:relative;overflow:auto;max-height:calc(100vh - 215px);border:1px solid var(--line);border-radius:12px;background:var(--surface);--glab:240px}
 .g-grid{display:grid;width:max-content;min-width:100%}
 .g-corner{grid-column:1;grid-row:1 / span 2;position:sticky;left:0;top:0;z-index:7;background:var(--surface);border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:8px 12px;font-weight:700;font-size:12.5px;color:var(--muted);display:flex;align-items:flex-end}
 .g-mon{grid-row:1;position:sticky;top:0;z-index:5;background:var(--surface);font-size:12.5px;font-weight:700;padding:6px 6px 0;border-left:1px solid var(--line);white-space:nowrap;overflow:hidden}
@@ -1196,6 +1196,17 @@ function renderGantt(){
     + '<span><i class="lg-ghost"></i>Repetición programada</span><span><i class="lg-hol"></i>Feriado</span><span><i class="lg-abs"></i>Vacaciones o permiso</span><span><i class="lg-we"></i>Fin de semana</span></div>';
   document.getElementById("body").innerHTML = legend + '<div class="gantt" style="--glab:'+labW+'px"><div class="g-grid" style="grid-template-columns:var(--glab) repeat('+N+','+W+'px);grid-template-rows:26px 36px'+(R ? ' repeat('+R+',34px)' : '')+'">'+h+'</div>'
     + (R ? '' : '<div class="g-empty">No hay tareas con fecha en este período. Usa las flechas para moverte o ponle fechas a tus tareas.</div>') + '</div>';
+  const sc = document.querySelector(".gantt");
+  if (sc){ sc.addEventListener("scroll", ganttStickTitles, {passive:true}); ganttStickTitles(); }
+}
+// Mantiene visible el título de las barras que empiezan antes de la parte visible (detrás de la columna de nombres)
+function ganttStickTitles(){
+  const sc = document.querySelector(".gantt"); if (!sc) return;
+  const edge = sc.scrollLeft + (parseFloat(sc.style.getPropertyValue("--glab")) || 240);
+  sc.querySelectorAll(".g-bar").forEach(b => {
+    const hidden = edge - b.offsetLeft;
+    b.style.paddingLeft = hidden > 0 ? Math.max(7, Math.min(hidden + 7, b.offsetWidth - 80)) + "px" : "";
+  });
 }
 
 /* ---------- Tablero (Kanban por estado) ---------- */
