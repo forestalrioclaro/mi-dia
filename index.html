@@ -844,7 +844,7 @@ const sortDone = (a,b) => (b.completedAt||0) - (a.completedAt||0);
 function tasksFor(v){
   const t = today();
   const all = state.tasks;
-  if (v === "myday") return all.filter(x => x.myDay === t);
+  if (v === "myday") return all.filter(x => x.myDay === t || isToday(x));
   if (v === "important") return all.filter(x => x.important);
   if (v === "planned") return all.filter(x => x.due);
   if (v === "late") return all.filter(isLate);
@@ -854,9 +854,22 @@ function tasksFor(v){
   return [];
 }
 function countOpen(v){ return tasksFor(v).filter(x => !x.done).length; }
+// Tareas que corresponden hoy: atrasadas, las que vencen hoy y las de varios días cuyo plazo incluye hoy.
+// Entran solas a Mi día, sin tener que agregarlas.
+function isToday(t){
+  if (t.done || t.paused || !t.due) return false;
+  const d = today();
+  return t.due <= d || (hasSpan(t) && t.start <= d && d <= t.due);
+}
+function todayReason(t){
+  const d = today();
+  if (t.due < d) return "Atrasada · venció " + dueLabel(t.due).toLowerCase();
+  if (t.due === d) return "Vence hoy";
+  return "En plazo hasta el " + dueLabel(t.due).toLowerCase();
+}
 function suggestions(){
   const t = today(), soon = addDays(t,2);
-  return state.tasks.filter(x => !x.done && !x.paused && x.myDay !== t).map(x => {
+  return state.tasks.filter(x => !x.done && !x.paused && x.myDay !== t && !isToday(x)).map(x => {
     let why = "";
     if (x.due && x.due < t) why = "Vencida " + dueLabel(x.due).toLowerCase();
     else if (x.due === t) why = "Vence hoy";
@@ -893,6 +906,7 @@ function taskRow(t, showList){
   const tt = today();
   const meta = [];
   if (t.doing && !t.done) meta.push('<span class="badge-doing">En curso</span>');
+  if (view === "myday" && isToday(t) && t.myDay !== tt) meta.push('<span class="'+(t.due < tt ? 'late' : 'today')+'">'+esc(todayReason(t))+'</span>');
   if (t.paused && !t.done) meta.push('<span class="badge-pause" title="'+esc(pauseText(t))+'">En pausa'+(t.pauseReason ? ': '+esc(t.pauseReason) : '')+'</span>');
   if (showList) meta.push('<span>'+esc(listName(t.listId))+'</span>');
   if (t.myDay === tt && view !== "myday") meta.push('<span>'+I.sun.replace('width="20" height="20"','width="13" height="13"')+'Mi día</span>');
@@ -919,7 +933,7 @@ function doneBlock(items, showList){
 }
 function emptyState(v){
   const msgs = {
-    myday:["Organiza tu día","Escribe arriba lo que harás hoy y presiona Enter. Revisa las sugerencias para traer tareas vencidas o pendientes de ayer."],
+    myday:["Nada para hoy","Tus tareas atrasadas y las que vencen hoy aparecen aquí solas. Agrega una arriba o súmale fechas a tus tareas."],
     important:["Nada marcado como importante","Marca una tarea con la estrella para verla aquí."],
     planned:["Sin fechas de vencimiento","Las tareas con fecha aparecen aquí, agrupadas por día."],
     late:["¡Sin atrasos!","Las tareas cuya fecha de vencimiento ya pasó aparecen aquí (excepto las que están en pausa)."],
@@ -952,8 +966,9 @@ function renderMain(){
   if (view === "myday"){
     const nw = nonWorkingText(today());
     sub.textContent = fmtLong(today()) + (nw ? " · " + nw : "");
-    const n = suggestions().length;
-    acts.innerHTML = '<button class="chip-btn" data-act="sugg">'+I.bulb+'Sugerencias'+(n?' ('+n+')':'')+'</button>';
+    const auto = state.tasks.filter(isToday).length, n = suggestions().length;
+    sub.textContent += " · " + (auto ? auto + (auto === 1 ? " tarea del día" : " tareas del día") + ", al día automáticamente" : "sin tareas con fecha para hoy");
+    acts.innerHTML = '<button class="chip-btn" data-act="sugg">'+I.bulb+'Más sugerencias'+(n?' ('+n+')':'')+'</button>';
   }
   if (isCustom) acts.innerHTML = '<button class="chip-btn danger" data-act="delList">'+I.trash+'Eliminar lista</button>';
 
@@ -962,10 +977,10 @@ function renderMain(){
 
   if (view === "myday" && showSugg){
     const sg = suggestions();
-    h += '<div class="sugg"><h3>Sugerencias para hoy</h3>' + (sg.length ? sg.map(s =>
+    h += '<div class="sugg"><h3>Otras tareas que podrías sumar a hoy</h3>' + (sg.length ? sg.map(s =>
       '<div class="sugg-row" data-id="'+esc(s.task.id)+'"><div style="flex:1;min-width:0"><div>'+esc(s.task.title)+'</div><div class="why">'+esc(s.why)+' · '+esc(listName(s.task.listId))+'</div></div>'
       +'<button class="icon-btn" data-act="addMyDay" aria-label="Agregar a Mi día">'+I.plus+'</button></div>').join("")
-      : '<p class="why" style="margin:0">No hay tareas vencidas ni pendientes de días anteriores.</p>') + '</div>';
+      : '<p class="why" style="margin:0">Nada más que sumar: las atrasadas y las de hoy ya aparecen abajo.</p>') + '</div>';
   }
 
   const items = tasksFor(view);
