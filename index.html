@@ -200,7 +200,7 @@ svg{display:block;flex:none}
 .legend i{width:11px;height:11px;border-radius:3px;display:inline-block}
 .legend b{color:var(--ink);font-weight:600}
 .lg-ok{background:var(--pine)} .lg-doing{background:var(--doing)} .lg-late{background:var(--danger)} .lg-wait{background:var(--muted)} .lg-paused{background:var(--pause)}
-.cal-week,.cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.cal-week,.cal-grid{display:grid;grid-template-columns:repeat(var(--cols,7),minmax(0,1fr));gap:4px}
 .cal-week{font-size:12.5px;color:var(--muted);font-weight:600;margin-bottom:4px;padding:0 6px}
 .cal-cell{background:var(--surface);border-radius:8px;min-height:108px;padding:6px;display:flex;flex-direction:column;gap:3px;border:1px solid transparent;min-width:0}
 .cal-cell.out{opacity:.45}
@@ -222,10 +222,16 @@ svg{display:block;flex:none}
 body.cal-move,body.cal-move *{cursor:grabbing!important}
 body.cal-resize,body.cal-resize *{cursor:ew-resize!important}
 .cal-hint{margin-left:auto;font-style:italic}
+.cal-tools{display:inline-flex;align-items:center;gap:2px;margin-left:6px;padding-left:6px;border-left:1px solid var(--line)}
+.cal-tools .chip-btn{font-size:18px;font-weight:700;line-height:1;padding:5px 11px}
+.cal-tools .chip-btn:disabled{opacity:.35;cursor:default}
+.cal-zval{font-size:12.5px;color:var(--muted);min-width:40px;text-align:center;font-variant-numeric:tabular-nums}
 @media (max-width:760px){.cal-hint{display:none}}
 /* Semanas con barras continuas */
 .cal-grid.cal-weeks{display:flex;flex-direction:column;gap:4px}
-.cal-wk{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));column-gap:4px;row-gap:3px;min-height:108px}
+.cal-wk{display:grid;grid-template-columns:repeat(var(--cols,7),minmax(0,1fr));column-gap:4px;row-gap:3px;min-height:var(--wkh,108px)}
+.cal-task{font-size:var(--calfs,12.5px)}
+.cal-num{font-size:var(--calfs,12.5px)}
 .cal-wk > .cal-cell{min-height:0;padding:0}
 .cal-dh{padding:6px 6px 0;position:relative;z-index:1;pointer-events:none;min-width:0}
 .cal-dh.out{opacity:.45}
@@ -616,6 +622,10 @@ let showSugg = false;
 let reportDate = today();
 let calMonth = today().slice(0,8) + "01";
 let calDone = (() => { try { return localStorage.getItem("mis-tareas-cal-listas") !== "0"; } catch(e){ return true; } })();
+// Fin de semana visible y zoom del calendario
+let calWeekend = (() => { try { return localStorage.getItem("mis-tareas-cal-finde") !== "0"; } catch(e){ return true; } })();
+const CAL_SCALES = [0.7, 0.85, 1, 1.2, 1.45, 1.75, 2.1];
+let calScale = (() => { const v = +localStorage.getItem("mis-tareas-cal-zoom"); return CAL_SCALES.includes(v) ? v : 1; })();
 const mondayOf = s => { const d = parse(s); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return ymd(d); };
 const GZ = {"2w":{days:14, w:64, label:"2 semanas", step:7, back:0}, "6w":{days:42, w:32, label:"6 semanas", step:14, back:7}, "3m":{days:91, w:15, label:"3 meses", step:28, back:14}};
 let ganttZoom = "6w", ganttDone = false;
@@ -1069,7 +1079,11 @@ function renderCalendar(){
     '<button class="chip-btn" data-act="calPrev" aria-label="Mes anterior">'+I.chevl+'</button>'
     + '<button class="chip-btn" data-act="calToday">Hoy</button>'
     + '<button class="chip-btn" data-act="calNext" aria-label="Mes siguiente">'+I.chev+'</button>'
-    + '<button class="chip-btn'+(calDone?' on':'')+'" data-act="calDone" title="'+(calDone?'Ocultar':'Ver')+' las tareas ya completadas">'+I.check.replace('width="12" height="12"','width="15" height="15"')+(calDone?'Ocultar listas':'Ver listas')+'</button>';
+    + '<button class="chip-btn'+(calDone?' on':'')+'" data-act="calDone" title="'+(calDone?'Ocultar':'Ver')+' las tareas ya completadas">'+I.check.replace('width="12" height="12"','width="15" height="15"')+(calDone?'Ocultar listas':'Ver listas')+'</button>'
+    + '<button class="chip-btn'+(calWeekend?'':' on')+'" data-act="calWe" title="'+(calWeekend?'Ocultar':'Mostrar')+' sábados y domingos">'+(calWeekend?'Ocultar finde':'Ver finde')+'</button>'
+    + '<span class="cal-tools"><button class="chip-btn" data-act="calOut" title="Alejar"'+(calScale === CAL_SCALES[0] ? ' disabled' : '')+' aria-label="Alejar">−</button>'
+    + '<span class="cal-zval">'+Math.round(calScale * 100)+'%</span>'
+    + '<button class="chip-btn" data-act="calIn" title="Acercar"'+(calScale === CAL_SCALES[CAL_SCALES.length-1] ? ' disabled' : '')+' aria-label="Acercar">+</button></span>';
   const byDay = {};
   const visible = state.tasks.filter(t => calDone || !t.done);
   visible.forEach(t => {
@@ -1122,26 +1136,29 @@ function renderCalendar(){
     return '<button class="cal-task '+(o.ghost ? 'ghost' : 'st-'+s)+(selected===t.id&&!o.ghost?' sel':'')+(sg.contL?' cont-l':'')+(sg.contR?' cont-r':'')+'" data-act="open" data-id="'+esc(t.id)+'"'
       + ' style="grid-column:'+(sg.c1+1)+' / '+(sg.c2+2)+';grid-row:'+(sg.lane+2)+'" title="'+esc(tip)+'">'+handles+((t.repeat&&!t.done)||o.ghost?'↻ ':'')+esc(t.title)+'</button>';
   };
+  // Columnas visibles: lunes a viernes, o los 7 días
+  const DAY_IDX = [0,1,2,3,4,5,6].filter(i => calWeekend || i < 5);
+  const colOf = i => DAY_IDX.indexOf(i);
   let weeks = "";
   for (let w = new Date(start); w <= end; w.setDate(w.getDate()+7)){
-    const ws = ymd(w), we = addDays(ws, 6);
+    const ws = ymd(w), we = addDays(ws, DAY_IDX[DAY_IDX.length-1]);
     const segs = occ.filter(o => o.s <= we && o.e >= ws).map(o => {
       const a = o.s < ws ? ws : o.s, b = o.e > we ? we : o.e;
-      return {o, c1:dBetween(ws, a), c2:dBetween(ws, b), contL:o.s < ws, contR:o.e > we};
-    });
+      return {o, c1:colOf(Math.min(dBetween(ws, a), DAY_IDX[DAY_IDX.length-1])), c2:colOf(Math.min(dBetween(ws, b), DAY_IDX[DAY_IDX.length-1])), contL:o.s < ws, contR:o.e > we};
+    }).filter(sg => sg.c1 >= 0 && sg.c2 >= 0);
     segs.sort((x,y) => x.c1 - y.c1 || (y.c2 - y.c1) - (x.c2 - x.c1) || (x.o.ghost - y.o.ghost)
       || (x.o.ghost ? 0 : order[calStatus(x.o.t)] - order[calStatus(y.o.t)]) || x.o.t.createdAt - y.o.t.createdAt);
     const laneEnd = [];
     segs.forEach(sg => { let l = laneEnd.findIndex(e => e < sg.c1); if (l < 0){ l = laneEnd.length; laneEnd.push(sg.c2); } else laneEnd[l] = sg.c2; sg.lane = l; });
     let row = "";
-    for (let i = 0; i < 7; i++){
-      const k = addDays(ws, i), dd = parse(k), out = dd.getMonth() !== m.getMonth();
+    DAY_IDX.forEach((di, i) => {
+      const k = addDays(ws, di), dd = parse(k), out = dd.getMonth() !== m.getMonth();
       const hol = holidayName(k), abs = absenceOn(k);
       const dayCls = hol ? ' holiday' : isWeekend(k) ? ' weekend' : '';
       const labels = (hol ? '<div class="cal-hol">'+esc(hol)+'</div>' : '') + (abs ? '<div class="cal-abs">'+esc(abs.type)+'</div>' : '');
       row += '<div class="cal-cell'+dayCls+(abs&&!hol?' absent':'')+(out?' out':'')+(k===tt?' is-today':'')+'" data-date="'+k+'" style="grid-column:'+(i+1)+';grid-row:1 / -1"'+(hol?' title="Feriado: '+esc(hol)+'"':'')+'></div>'
         + '<div class="cal-dh'+(hol?' holiday':'')+(out?' out':'')+(k===tt?' is-today':'')+'" style="grid-column:'+(i+1)+';grid-row:1"><div class="cal-num">'+dd.getDate()+'</div>'+labels+'</div>';
-    }
+    });
     row += segs.map(bar).join("") + '<div class="cal-fill" style="grid-row:'+(laneEnd.length+2)+'"></div>';
     weeks += '<div class="cal-wk" style="grid-template-rows:auto'+(laneEnd.length ? ' repeat('+laneEnd.length+',auto)' : '')+' 1fr">'+row+'</div>';
   }
@@ -1155,13 +1172,14 @@ function renderCalendar(){
     const abs = absenceOn(k);
     const holHtml = (hol ? '<div class="cal-hol">'+esc(hol)+'</div>' : '') + (abs ? '<div class="cal-abs">'+esc(abs.type)+'</div>' : '');
     const html = items.map(chip).join("") + gh.map(ghostChip).join("");
+    if (!calWeekend && isWeekend(k)) continue;
     if (!out && (items.length || gh.length || hol || abs)) agenda += '<div class="ag-day'+(hol?' holiday':abs?' absent':'')+(k===tt?' is-today':'')+'"><div class="ag-h">'+esc(fmtLong(k))+(hol?' · Feriado':'')+'</div>'+holHtml+html+'</div>';
   }
   const lg = s => (s === "ok" && !calDone) ? '' : '<span><i class="lg-'+s+'"></i>'+ST_LABEL[s]+' <b>'+counted[s].size+'</b></span>';
   document.getElementById("body").innerHTML =
-    '<div class="legend">'+lg("ok")+lg("doing")+lg("late")+lg("wait")+lg("paused")+'<span><i class="lg-ghost"></i>Repetición programada</span><span><i class="lg-hol"></i>Feriado</span><span><i class="lg-abs"></i>Vacaciones o permiso</span><span><i class="lg-we"></i>Fin de semana</span><span class="cal-hint">Arrastra una tarea para moverla; estira sus bordes para cambiar los días</span></div>'
-    + '<div class="cal-week"><span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span></div>'
-    + '<div class="cal-grid cal-weeks">'+weeks+'</div>'
+    '<div class="legend">'+lg("ok")+lg("doing")+lg("late")+lg("wait")+lg("paused")+'<span><i class="lg-ghost"></i>Repetición programada</span><span><i class="lg-hol"></i>Feriado</span><span><i class="lg-abs"></i>Vacaciones o permiso</span>'+(calWeekend ? '<span><i class="lg-we"></i>Fin de semana</span>' : '')+'<span class="cal-hint">Arrastra una tarea para moverla; estira sus bordes para cambiar los días</span></div>'
+    + '<div class="cal-week" style="--cols:'+DAY_IDX.length+'">'+DAY_IDX.map(i => '<span>'+["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"][i]+'</span>').join("")+'</div>'
+    + '<div class="cal-grid cal-weeks" style="--cols:'+DAY_IDX.length+';--wkh:'+Math.round(108*calScale)+'px;--calfs:'+(12.5*calScale).toFixed(1)+'px">'+weeks+'</div>'
     + '<div class="agenda">'+(agenda || '<p class="none">No hay tareas este mes.</p>')+'</div>';
 }
 
@@ -1551,6 +1569,19 @@ document.getElementById("headActions").addEventListener("click", async e => {
     calMonth = ymd(d); renderMain();
   }
   if (b.dataset.act === "calToday"){ calMonth = today().slice(0,8) + "01"; renderMain(); }
+  if (b.dataset.act === "calWe"){
+    calWeekend = !calWeekend;
+    try { localStorage.setItem("mis-tareas-cal-finde", calWeekend ? "1" : "0"); } catch(err){}
+    renderMain();
+  }
+  if (b.dataset.act === "calIn" || b.dataset.act === "calOut"){
+    const i = CAL_SCALES.indexOf(calScale) + (b.dataset.act === "calIn" ? 1 : -1);
+    if (i >= 0 && i < CAL_SCALES.length){
+      calScale = CAL_SCALES[i];
+      try { localStorage.setItem("mis-tareas-cal-zoom", String(calScale)); } catch(err){}
+      renderMain();
+    }
+  }
   if (b.dataset.act === "calDone"){
     calDone = !calDone;
     try { localStorage.setItem("mis-tareas-cal-listas", calDone ? "1" : "0"); } catch(err){}
