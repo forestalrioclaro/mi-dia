@@ -606,6 +606,7 @@ let showDone = true;
 let showSugg = false;
 let reportDate = today();
 let calMonth = today().slice(0,8) + "01";
+let calDone = (() => { try { return localStorage.getItem("mis-tareas-cal-listas") !== "0"; } catch(e){ return true; } })();
 const mondayOf = s => { const d = parse(s); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return ymd(d); };
 const GZ = {"2w":{days:14, w:64, label:"2 semanas", step:7, back:0}, "6w":{days:42, w:32, label:"6 semanas", step:14, back:7}, "3m":{days:91, w:15, label:"3 meses", step:28, back:14}};
 let ganttZoom = "6w", ganttDone = false;
@@ -1020,9 +1021,11 @@ function renderCalendar(){
   document.getElementById("headActions").innerHTML =
     '<button class="chip-btn" data-act="calPrev" aria-label="Mes anterior">'+I.chevl+'</button>'
     + '<button class="chip-btn" data-act="calToday">Hoy</button>'
-    + '<button class="chip-btn" data-act="calNext" aria-label="Mes siguiente">'+I.chev+'</button>';
+    + '<button class="chip-btn" data-act="calNext" aria-label="Mes siguiente">'+I.chev+'</button>'
+    + '<button class="chip-btn'+(calDone?' on':'')+'" data-act="calDone" title="'+(calDone?'Ocultar':'Ver')+' las tareas ya completadas">'+I.check.replace('width="12" height="12"','width="15" height="15"')+(calDone?'Ocultar listas':'Ver listas')+'</button>';
   const byDay = {};
-  state.tasks.forEach(t => {
+  const visible = state.tasks.filter(t => calDone || !t.done);
+  visible.forEach(t => {
     const days = hasSpan(t) ? spanDays(t.start, t.due) : [calDate(t)];
     days.forEach((d, i) => (byDay[d] = byDay[d] || []).push({t, i:i+1, n:days.length}));
   });
@@ -1052,7 +1055,7 @@ function renderCalendar(){
   // Calendario por semanas: cada tarea es una sola barra que cruza los días que abarca
   const dBetween = (a, b) => Math.round((parse(b) - parse(a)) / 86400000);
   const occ = [];
-  state.tasks.forEach(t => { const s0 = hasSpan(t) ? t.start : calDate(t); occ.push({t, s:s0, e:hasSpan(t) ? t.due : s0, ghost:false}); });
+  visible.forEach(t => { const s0 = hasSpan(t) ? t.start : calDate(t); occ.push({t, s:s0, e:hasSpan(t) ? t.due : s0, ghost:false}); });
   state.tasks.filter(t => !t.done && t.repeat && t.due).forEach(t => {
     const len = hasSpan(t) ? spanDays(t.start, t.due).length : 1;
     let d = t.due;
@@ -1107,7 +1110,7 @@ function renderCalendar(){
     const html = items.map(chip).join("") + gh.map(ghostChip).join("");
     if (!out && (items.length || gh.length || hol || abs)) agenda += '<div class="ag-day'+(hol?' holiday':abs?' absent':'')+(k===tt?' is-today':'')+'"><div class="ag-h">'+esc(fmtLong(k))+(hol?' · Feriado':'')+'</div>'+holHtml+html+'</div>';
   }
-  const lg = s => '<span><i class="lg-'+s+'"></i>'+ST_LABEL[s]+' <b>'+counted[s].size+'</b></span>';
+  const lg = s => (s === "ok" && !calDone) ? '' : '<span><i class="lg-'+s+'"></i>'+ST_LABEL[s]+' <b>'+counted[s].size+'</b></span>';
   document.getElementById("body").innerHTML =
     '<div class="legend">'+lg("ok")+lg("doing")+lg("late")+lg("wait")+lg("paused")+'<span><i class="lg-ghost"></i>Repetición programada</span><span><i class="lg-hol"></i>Feriado</span><span><i class="lg-abs"></i>Vacaciones o permiso</span><span><i class="lg-we"></i>Fin de semana</span><span class="cal-hint">Arrastra una tarea para moverla; estira sus bordes para cambiar los días</span></div>'
     + '<div class="cal-week"><span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span></div>'
@@ -1501,6 +1504,11 @@ document.getElementById("headActions").addEventListener("click", async e => {
     calMonth = ymd(d); renderMain();
   }
   if (b.dataset.act === "calToday"){ calMonth = today().slice(0,8) + "01"; renderMain(); }
+  if (b.dataset.act === "calDone"){
+    calDone = !calDone;
+    try { localStorage.setItem("mis-tareas-cal-listas", calDone ? "1" : "0"); } catch(err){}
+    renderMain();
+  }
   if (b.dataset.act === "gPrev" || b.dataset.act === "gNext"){ ganttStart = addDays(ganttStart, (b.dataset.act === "gNext" ? 1 : -1) * GZ[ganttZoom].step); renderMain(); }
   if (b.dataset.act === "gToday"){ ganttStart = mondayOf(addDays(today(), -GZ[ganttZoom].back)); renderMain(); }
   if (b.dataset.act === "gZoom"){ ganttZoom = b.dataset.z; ganttStart = mondayOf(addDays(today(), -GZ[ganttZoom].back)); renderMain(); }
