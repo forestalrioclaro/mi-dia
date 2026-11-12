@@ -622,6 +622,11 @@ let showSugg = false;
 let reportDate = today();
 let calMonth = today().slice(0,8) + "01";
 let calDone = (() => { try { return localStorage.getItem("mis-tareas-cal-listas") !== "0"; } catch(e){ return true; } })();
+// En las listas: ver solo lo de este mes (oculta lo que vence en meses siguientes)
+let listMonth = (() => { try { return localStorage.getItem("mis-tareas-lista-mes") === "1"; } catch(e){ return false; } })();
+const endOfMonth = () => { const d = parse(today()); return ymd(new Date(d.getFullYear(), d.getMonth()+1, 0)); };
+// Entra si no tiene fecha, si ya empezó o si vence dentro del mes en curso
+const inThisMonth = t => !t.due || t.due <= endOfMonth() || (hasSpan(t) && t.start <= endOfMonth());
 // Fin de semana visible y zoom del calendario
 let calWeekend = (() => { try { return localStorage.getItem("mis-tareas-cal-finde") !== "0"; } catch(e){ return true; } })();
 const CAL_SCALES = [0.7, 0.85, 1, 1.2, 1.45, 1.75, 2.1];
@@ -980,7 +985,11 @@ function renderMain(){
     sub.textContent += " · " + (auto ? auto + (auto === 1 ? " tarea del día" : " tareas del día") + ", al día automáticamente" : "sin tareas con fecha para hoy");
     acts.innerHTML = '<button class="chip-btn" data-act="sugg">'+I.bulb+'Más sugerencias'+(n?' ('+n+')':'')+'</button>';
   }
-  if (isCustom) acts.innerHTML = '<button class="chip-btn danger" data-act="delList">'+I.trash+'Eliminar lista</button>';
+  if (view.startsWith("list:")){
+    const next = state.tasks.filter(t => t.listId === view.slice(5) && !t.done && !inThisMonth(t)).length;
+    acts.innerHTML = '<button class="chip-btn'+(listMonth?' on':'')+'" data-act="listMonth" title="'+(listMonth?'Ver también las de meses siguientes':'Ocultar las tareas que vencen el próximo mes')+'">'+I.cal+(listMonth?'Viendo solo este mes':'Solo este mes')+(!listMonth && next ? ' ('+next+' después)' : '')+'</button>';
+  }
+  if (isCustom) acts.innerHTML += '<button class="chip-btn danger" data-act="delList">'+I.trash+'Eliminar lista</button>';
 
   let h = "";
   if (view !== "search" && view !== "late") h += '<div class="add"><span class="plus">'+I.plus+'</span><input id="addInput" placeholder="Agregar una tarea" aria-label="Agregar una tarea" autocomplete="off"></div>';
@@ -993,12 +1002,14 @@ function renderMain(){
       : '<p class="why" style="margin:0">Nada más que sumar: las atrasadas y las de hoy ya aparecen abajo.</p>') + '</div>';
   }
 
-  const items = tasksFor(view);
+  let items = tasksFor(view);
+  if (listMonth && view.startsWith("list:")) items = items.filter(inThisMonth);
   const open = items.filter(t => !t.done).sort(sortOpen);
   const done = items.filter(t => t.done);
   const showList = !view.startsWith("list:");
 
-  if (!items.length) h += emptyState(view.startsWith("list:") ? "list" : view);
+  if (!items.length && listMonth && view.startsWith("list:")) h += '<div class="empty"><div class="big">'+I.cal.replace('width="20" height="20"','width="54" height="54"')+'</div><strong>Nada para este mes</strong>Esta lista solo tiene tareas que vencen más adelante. Toca “Viendo solo este mes” para verlas.</div>';
+  else if (!items.length) h += emptyState(view.startsWith("list:") ? "list" : view);
   else if (view === "planned"){
     const t = today(), tm = addDays(t,1), wk = addDays(t,7);
     const g = {late:[],today:[],tom:[],week:[],later:[],paused:[]};
@@ -1569,6 +1580,11 @@ document.getElementById("headActions").addEventListener("click", async e => {
     calMonth = ymd(d); renderMain();
   }
   if (b.dataset.act === "calToday"){ calMonth = today().slice(0,8) + "01"; renderMain(); }
+  if (b.dataset.act === "listMonth"){
+    listMonth = !listMonth;
+    try { localStorage.setItem("mis-tareas-lista-mes", listMonth ? "1" : "0"); } catch(err){}
+    renderMain();
+  }
   if (b.dataset.act === "calWe"){
     calWeekend = !calWeekend;
     try { localStorage.setItem("mis-tareas-cal-finde", calWeekend ? "1" : "0"); } catch(err){}
